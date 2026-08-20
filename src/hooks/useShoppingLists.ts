@@ -10,7 +10,7 @@ interface DbItem {
   list_id: string
   name: string
   quantity: string | null
-  category: string | null
+  category_id: string | null
   price: number | null
   position: number
   done: boolean
@@ -32,7 +32,7 @@ function mapItem(row: DbItem): Item {
     id: row.id,
     name: row.name,
     quantity: row.quantity ?? undefined,
-    category: row.category ?? undefined,
+    categoryId: row.category_id ?? undefined,
     price: row.price ?? undefined,
     done: row.done,
     position: row.position,
@@ -60,7 +60,7 @@ export function useShoppingLists(session: Session | null) {
     const { data, error } = await supabase
       .from('lists')
       .select(
-        'id, name, created_at, items(id, list_id, name, quantity, category, price, position, done, created_at)',
+        'id, name, created_at, items(id, list_id, name, quantity, category_id, price, position, done, created_at)',
       )
       .order('created_at', { ascending: false })
       .limit(LISTS_LIMIT)
@@ -186,7 +186,7 @@ export function useShoppingLists(session: Session | null) {
             list_id: newListId,
             name: item.name,
             quantity: item.quantity ?? null,
-            category: item.category ?? null,
+            category_id: item.categoryId ?? null,
             price: item.price ?? null,
             position: item.position,
             done: false,
@@ -239,11 +239,10 @@ export function useShoppingLists(session: Session | null) {
     itemId: string,
     name: string,
     quantity?: string,
-    category?: string,
+    categoryId?: string,
     price?: number,
   ) {
     const trimmedQuantity = quantity?.trim() || undefined
-    const trimmedCategory = category?.trim() || undefined
 
     setLists((prev) =>
       prev.map((list) =>
@@ -251,9 +250,7 @@ export function useShoppingLists(session: Session | null) {
           ? {
               ...list,
               items: list.items.map((item) =>
-                item.id === itemId
-                  ? { ...item, name, quantity: trimmedQuantity, category: trimmedCategory, price }
-                  : item,
+                item.id === itemId ? { ...item, name, quantity: trimmedQuantity, categoryId, price } : item,
               ),
             }
           : list,
@@ -265,7 +262,7 @@ export function useShoppingLists(session: Session | null) {
       .update({
         name,
         quantity: trimmedQuantity ?? null,
-        category: trimmedCategory ?? null,
+        category_id: categoryId ?? null,
         price: price ?? null,
       })
       .eq('id', itemId)
@@ -349,7 +346,7 @@ export function useShoppingLists(session: Session | null) {
         list_id: listId,
         name: item.name,
         quantity: item.quantity ?? null,
-        category: item.category ?? null,
+        category_id: item.categoryId ?? null,
         price: item.price ?? null,
         position: item.position,
         done: item.done,
@@ -379,7 +376,7 @@ export function useShoppingLists(session: Session | null) {
             list_id: list.id,
             name: item.name,
             quantity: item.quantity ?? null,
-            category: item.category ?? null,
+            category_id: item.categoryId ?? null,
             price: item.price ?? null,
             position: item.position,
             done: item.done,

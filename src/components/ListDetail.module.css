@@ -275,6 +275,11 @@
   gap: 8px;
 }
 
+.itemCategoryIcon {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
 .itemName {
   font-size: 16px;
   color: var(--color-text);
@@ -365,14 +370,14 @@
 }
 
 .editInputName,
-.editInputCategory {
+.editSelectCategory {
   flex: 1;
   min-width: 0;
 }
 
 .editInputName,
 .editInputQty,
-.editInputCategory,
+.editSelectCategory,
 .editInputPrice {
   padding: 10px 12px;
   border-radius: var(--radius-sm);
@@ -390,7 +395,7 @@
 
 .editInputName:focus,
 .editInputQty:focus,
-.editInputCategory:focus,
+.editSelectCategory:focus,
 .editInputPrice:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
