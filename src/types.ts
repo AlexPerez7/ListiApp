@@ -2,7 +2,10 @@ export interface Item {
   id: string
   name: string
   quantity?: string
+  price?: number
+  category?: string
   done: boolean
+  position: number
   createdAt: number
 }
 
