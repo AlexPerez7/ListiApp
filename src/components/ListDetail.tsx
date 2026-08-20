@@ -7,7 +7,6 @@ import styles from './ListDetail.module.css'
 interface ListDetailProps {
   list: ShoppingList
   categories: Category[]
-  itemSuggestions: string[]
   onBack: () => void
   onAddItem: (name: string, quantity?: string) => void
   onUpdateItem: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
@@ -56,7 +55,6 @@ function formatPrice(value: number): string {
 export function ListDetail({
   list,
   categories,
-  itemSuggestions,
   onBack,
   onAddItem,
   onUpdateItem,
@@ -196,7 +194,6 @@ export function ListDetail({
           placeholder="Ítem (ej: Leche)"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          list="item-suggestions"
         />
         <input
           className={styles.inputQty}
@@ -209,11 +206,6 @@ export function ListDetail({
           <Icon name="plus" size={22} />
         </button>
       </form>
-      <datalist id="item-suggestions">
-        {itemSuggestions.map((suggestion) => (
-          <option key={suggestion} value={suggestion} />
-        ))}
-      </datalist>
 
       {list.items.length > 3 && (
         <input
@@ -352,7 +344,6 @@ const ItemRow = memo(function ItemRow({
               className={styles.editInputName}
               value={nameDraft}
               onChange={(e) => setNameDraft(e.target.value)}
-              list="item-suggestions"
               autoFocus
             />
             <input

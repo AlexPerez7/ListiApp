@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
 import { useShoppingLists } from './hooks/useShoppingLists'
@@ -69,11 +69,6 @@ function App() {
     deleteCategory,
   } = useCategories(session)
 
-  const itemSuggestions = useMemo(
-    () => Array.from(new Set(lists.flatMap((list) => list.items.map((item) => item.name)))).sort(),
-    [lists],
-  )
-
   function showUndoToast(message: string, onUndo: () => void) {
     window.clearTimeout(toastTimeoutRef.current)
     const id = Date.now()
@@ -120,7 +115,6 @@ function App() {
         <ListDetail
           list={selectedList}
           categories={categories}
-          itemSuggestions={itemSuggestions}
           onBack={() => setSelectedListId(null)}
           onAddItem={(name, quantity) => addItem(selectedList.id, name, quantity)}
           onUpdateItem={(itemId, name, quantity, categoryId, price) =>
