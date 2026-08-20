@@ -4,12 +4,14 @@ import styles from './Home.module.css'
 
 interface HomeProps {
   lists: ShoppingList[]
+  loading: boolean
   onCreateList: (name: string) => void
   onSelectList: (id: string) => void
   onDeleteList: (id: string) => void
+  onSignOut: () => void
 }
 
-export function Home({ lists, onCreateList, onSelectList, onDeleteList }: HomeProps) {
+export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList, onSignOut }: HomeProps) {
   const [name, setName] = useState('')
 
   function handleSubmit(e: FormEvent) {
@@ -23,8 +25,13 @@ export function Home({ lists, onCreateList, onSelectList, onDeleteList }: HomePr
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>ListiApp</h1>
-        <p className={styles.subtitle}>Tus listas de compras</p>
+        <div>
+          <h1 className={styles.title}>ListiApp</h1>
+          <p className={styles.subtitle}>Tus listas de compras</p>
+        </div>
+        <button className={styles.signOutButton} onClick={onSignOut}>
+          Salir
+        </button>
       </header>
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -40,7 +47,11 @@ export function Home({ lists, onCreateList, onSelectList, onDeleteList }: HomePr
         </button>
       </form>
 
-      {lists.length === 0 ? (
+      {loading ? (
+        <div className={styles.empty}>
+          <p>Cargando tus listas…</p>
+        </div>
+      ) : lists.length === 0 ? (
         <div className={styles.empty}>
           <p>Todavía no tenés listas.</p>
           <p>Creá la primera arriba.</p>

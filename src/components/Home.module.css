@@ -8,6 +8,10 @@
 
 .header {
   padding-top: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .title {
@@ -15,6 +19,22 @@
   font-weight: 700;
   color: var(--color-primary-dark);
   letter-spacing: -0.3px;
+}
+
+.signOutButton {
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.signOutButton:active {
+  background: rgba(31, 41, 55, 0.05);
 }
 
 .subtitle {
