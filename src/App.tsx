@@ -104,6 +104,7 @@ function App() {
       setItemImage(listId, itemId, url)
     } catch (err) {
       console.error('Error al subir la foto del ítem:', err)
+      throw err
     }
   }
 
