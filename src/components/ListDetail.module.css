@@ -90,7 +90,28 @@
 
 .form {
   display: flex;
+  flex-direction: column;
   gap: 8px;
+}
+
+.formRow {
+  display: flex;
+  gap: 8px;
+}
+
+.categorySelect {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.categorySelect:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .inputName {

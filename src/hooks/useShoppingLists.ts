@@ -210,13 +210,14 @@ export function useShoppingLists(session: Session | null) {
       })
   }
 
-  function addItem(listId: string, name: string, quantity?: string) {
+  function addItem(listId: string, name: string, quantity?: string, categoryId?: string) {
     const id = crypto.randomUUID()
     const trimmedQuantity = quantity?.trim() || undefined
     const newItem: Item = {
       id,
       name,
       quantity: trimmedQuantity,
+      categoryId,
       done: false,
       position: Date.now(),
       createdAt: Date.now(),
@@ -228,7 +229,14 @@ export function useShoppingLists(session: Session | null) {
 
     supabase
       .from('items')
-      .insert({ id, list_id: listId, name, quantity: trimmedQuantity ?? null, position: newItem.position })
+      .insert({
+        id,
+        list_id: listId,
+        name,
+        quantity: trimmedQuantity ?? null,
+        category_id: categoryId ?? null,
+        position: newItem.position,
+      })
       .then(({ error }) => {
         if (error) console.error('Error al agregar ítem:', error.message)
       })

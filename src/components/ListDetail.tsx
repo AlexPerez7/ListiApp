@@ -8,7 +8,7 @@ interface ListDetailProps {
   list: ShoppingList
   categories: Category[]
   onBack: () => void
-  onAddItem: (name: string, quantity?: string) => void
+  onAddItem: (name: string, quantity?: string, categoryId?: string) => void
   onUpdateItem: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
   onToggleItem: (itemId: string) => void
   onDeleteItem: (itemId: string) => void
@@ -67,6 +67,7 @@ export function ListDetail({
 }: ListDetailProps) {
   const [name, setName] = useState('')
   const [quantity, setQuantity] = useState('')
+  const [categoryId, setCategoryId] = useState('')
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(list.name)
   const [shareStatus, setShareStatus] = useState<string | null>(null)
@@ -78,7 +79,7 @@ export function ListDetail({
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) return
-    onAddItem(trimmed, quantity)
+    onAddItem(trimmed, quantity, categoryId || undefined)
     setName('')
     setQuantity('')
   }
@@ -188,23 +189,38 @@ export function ListDetail({
       {shareStatus && <p className={styles.shareStatus}>{shareStatus}</p>}
 
       <form className={styles.form} onSubmit={handleSubmit}>
-        <input
-          className={styles.inputName}
-          type="text"
-          placeholder="Ítem (ej: Leche)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          className={styles.inputQty}
-          type="text"
-          placeholder="Cant."
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-        />
-        <button className={styles.addButton} type="submit" disabled={!name.trim()} aria-label="Agregar ítem">
-          <Icon name="plus" size={22} />
-        </button>
+        <div className={styles.formRow}>
+          <input
+            className={styles.inputName}
+            type="text"
+            placeholder="Ítem (ej: Leche)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            className={styles.inputQty}
+            type="text"
+            placeholder="Cant."
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
+          <button className={styles.addButton} type="submit" disabled={!name.trim()} aria-label="Agregar ítem">
+            <Icon name="plus" size={22} />
+          </button>
+        </div>
+        <select
+          className={styles.categorySelect}
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          aria-label="Categoría del ítem"
+        >
+          <option value="">Sin categoría</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.icon} {c.name}
+            </option>
+          ))}
+        </select>
       </form>
 
       {list.items.length > 3 && (
