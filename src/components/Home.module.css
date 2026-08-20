@@ -35,10 +35,11 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  font-size: 15px;
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.15s ease;
 }
 
 .signOutButton {
@@ -49,11 +50,12 @@
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 600;
+  transition: background-color 0.15s ease;
 }
 
 .signOutButton:active,
 .themeButton:active {
-  background: rgba(31, 41, 55, 0.05);
+  background: rgba(31, 41, 55, 0.08);
 }
 
 .subtitle {
@@ -85,20 +87,23 @@
 }
 
 .addButton {
-  padding: 14px 22px;
-  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   border: none;
   background: var(--color-accent);
   color: #ffffff;
-  font-weight: 600;
-  font-size: 15px;
   box-shadow: var(--shadow-sm);
-  white-space: nowrap;
-  transition: background-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
 .addButton:active {
   background: var(--color-accent-dark);
+  transform: scale(0.94);
 }
 
 .addButton:disabled {
@@ -126,8 +131,14 @@
   padding: 56px 16px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
   font-size: 15px;
+}
+
+.emptyIcon {
+  color: var(--color-border);
+  margin-bottom: 8px;
 }
 
 .list {
@@ -143,6 +154,12 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.card:active {
+  transform: scale(0.99);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--color-border);
 }
 
 .cardMain {
@@ -177,7 +194,10 @@
   border: none;
   background: none;
   color: var(--color-text-secondary);
-  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .deleteButton:active {

@@ -1,6 +1,8 @@
 import { memo, useState, type FormEvent } from 'react'
 import type { Category } from '../types'
 import { ICON_OPTIONS } from '../lib/categories'
+import { Icon } from './Icon'
+import { SkeletonList } from './Skeleton'
 import styles from './Categories.module.css'
 
 interface CategoriesProps {
@@ -61,11 +63,10 @@ export function Categories({ categories, loading, onCreate, onUpdate, onDelete }
       </form>
 
       {loading ? (
-        <div className={styles.empty}>
-          <p>Cargando categorías…</p>
-        </div>
+        <SkeletonList count={4} />
       ) : categories.length === 0 ? (
         <div className={styles.empty}>
+          <Icon name="tag" size={40} className={styles.emptyIcon} />
           <p>Todavía no tenés categorías.</p>
         </div>
       ) : (
@@ -158,7 +159,7 @@ const CategoryRow = memo(function CategoryRow({ category, onUpdate, onDelete }: 
           }
         }}
       >
-        ✕
+        <Icon name="close" size={17} />
       </button>
     </li>
   )

@@ -1,6 +1,8 @@
 import { memo, useCallback, useMemo, useState, type FormEvent } from 'react'
 import type { ShoppingList } from '../types'
 import type { Theme } from '../lib/theme'
+import { Icon } from './Icon'
+import { SkeletonList } from './Skeleton'
 import styles from './Home.module.css'
 
 interface HomeProps {
@@ -60,7 +62,7 @@ export function Home({
             onClick={onToggleTheme}
             aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
           >
-            {theme === 'dark' ? '☀️' : '🌙'}
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={17} />
           </button>
           <button className={styles.signOutButton} onClick={onSignOut}>
             Salir
@@ -76,8 +78,8 @@ export function Home({
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <button className={styles.addButton} type="submit" disabled={!name.trim()}>
-          Crear
+        <button className={styles.addButton} type="submit" disabled={!name.trim()} aria-label="Crear lista">
+          <Icon name="plus" size={22} />
         </button>
       </form>
 
@@ -93,11 +95,10 @@ export function Home({
       )}
 
       {loading ? (
-        <div className={styles.empty}>
-          <p>Cargando tus listas…</p>
-        </div>
+        <SkeletonList />
       ) : lists.length === 0 ? (
         <div className={styles.empty}>
+          <Icon name="list" size={40} className={styles.emptyIcon} />
           <p>Todavía no tienes listas.</p>
           <p>Crea la primera arriba.</p>
         </div>
@@ -144,7 +145,7 @@ const ListCard = memo(function ListCard({ list, onSelect, onDuplicate, onDelete 
         aria-label={`Duplicar lista ${list.name}`}
         onClick={() => onDuplicate(list.id)}
       >
-        ⧉
+        <Icon name="duplicate" size={17} />
       </button>
       <button
         className={styles.deleteButton}
@@ -155,7 +156,7 @@ const ListCard = memo(function ListCard({ list, onSelect, onDuplicate, onDelete 
           }
         }}
       >
-        ✕
+        <Icon name="close" size={17} />
       </button>
     </li>
   )

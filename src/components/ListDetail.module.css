@@ -23,11 +23,11 @@
   border: none;
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-  font-size: 18px;
   color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .deleteListButton,
@@ -37,10 +37,12 @@
 
 .deleteListButton:active {
   color: #dc2626;
+  background: rgba(31, 41, 55, 0.05);
 }
 
 .iconButton:active {
   color: var(--color-primary-dark);
+  background: rgba(31, 41, 55, 0.05);
 }
 
 .shareStatus {
@@ -124,18 +126,20 @@
 .addButton {
   flex-shrink: 0;
   width: 48px;
-  border-radius: var(--radius-md);
+  border-radius: 50%;
   border: none;
   background: var(--color-accent);
   color: #ffffff;
-  font-weight: 700;
-  font-size: 22px;
   box-shadow: var(--shadow-sm);
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
 .addButton:active {
   background: var(--color-accent-dark);
+  transform: scale(0.94);
 }
 
 .addButton:disabled {
@@ -148,6 +152,15 @@
   color: var(--color-text-secondary);
   padding: 56px 16px;
   font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.emptyIcon {
+  color: var(--color-border);
+  margin-bottom: 8px;
 }
 
 .searchInput {
@@ -167,22 +180,25 @@
 .groups {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .categoryGroup {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .categoryLabel {
-  font-size: 13px;
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: 12px;
   font-weight: 600;
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding-left: 4px;
+  background: var(--color-surface);
+  border-radius: 999px;
+  padding: 4px 10px;
+  margin-left: 2px;
 }
 
 .itemList {
@@ -233,6 +249,11 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   padding: 4px;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.item:active {
+  transform: scale(0.99);
 }
 
 .itemDone {
@@ -250,6 +271,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .itemDone .checkbox {
@@ -259,8 +281,18 @@
 
 .checkmark {
   color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
+  animation: checkPop 0.2s ease;
+}
+
+@keyframes checkPop {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .itemMain {
@@ -323,10 +355,10 @@
   border: none;
   background: none;
   color: var(--color-text-secondary);
-  font-size: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: color 0.15s ease;
 }
 
 .moveButton:disabled {
@@ -345,7 +377,10 @@
   border: none;
   background: none;
   color: var(--color-text-secondary);
-  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
 }
 
 .itemDelete:active {
@@ -370,14 +405,14 @@
 }
 
 .editInputName,
-.editInputCategory {
+.editSelectCategory {
   flex: 1;
   min-width: 0;
 }
 
 .editInputName,
 .editInputQty,
-.editInputCategory,
+.editSelectCategory,
 .editInputPrice {
   padding: 10px 12px;
   border-radius: var(--radius-sm);
@@ -395,7 +430,7 @@
 
 .editInputName:focus,
 .editInputQty:focus,
-.editInputCategory:focus,
+.editSelectCategory:focus,
 .editInputPrice:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
