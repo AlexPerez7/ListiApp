@@ -1,6 +1,7 @@
 import { memo, useCallback, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
+import { Icon } from './Icon'
 import styles from './ListDetail.module.css'
 
 interface ListDetailProps {
@@ -146,7 +147,7 @@ export function ListDetail({
     <div className={styles.page}>
       <header className={styles.header}>
         <button className={styles.backButton} onClick={onBack} aria-label="Volver a mis listas">
-          ←
+          <Icon name="back" />
         </button>
         <div className={styles.headerText}>
           {editingTitle ? (
@@ -171,7 +172,7 @@ export function ListDetail({
           </p>
         </div>
         <button className={styles.iconButton} aria-label="Compartir lista" onClick={handleShare}>
-          ⇪
+          <Icon name="share" />
         </button>
         <button
           className={styles.deleteListButton}
@@ -182,7 +183,7 @@ export function ListDetail({
             }
           }}
         >
-          ✕
+          <Icon name="close" />
         </button>
       </header>
 
@@ -205,7 +206,7 @@ export function ListDetail({
           onChange={(e) => setQuantity(e.target.value)}
         />
         <button className={styles.addButton} type="submit" disabled={!name.trim()} aria-label="Agregar ítem">
-          +
+          <Icon name="plus" size={22} />
         </button>
       </form>
       <datalist id="item-suggestions">
@@ -227,6 +228,7 @@ export function ListDetail({
 
       {list.items.length === 0 ? (
         <div className={styles.empty}>
+          <Icon name="cart" size={40} className={styles.emptyIcon} />
           <p>Agrega tu primer ítem arriba.</p>
         </div>
       ) : filteredItems.length === 0 ? (
@@ -403,7 +405,7 @@ const ItemRow = memo(function ItemRow({
         onClick={() => onToggle(item.id)}
         aria-label={item.done ? 'Marcar como pendiente' : 'Marcar como comprado'}
       >
-        {item.done && <span className={styles.checkmark}>✓</span>}
+        {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
       </button>
       <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
         {category && <span className={styles.itemCategoryIcon}>{category.icon}</span>}
@@ -421,7 +423,7 @@ const ItemRow = memo(function ItemRow({
             disabled={!onMoveUp}
             aria-label={`Subir ${item.name}`}
           >
-            ▲
+            <Icon name="chevronUp" size={14} />
           </button>
           <button
             className={styles.moveButton}
@@ -429,15 +431,15 @@ const ItemRow = memo(function ItemRow({
             disabled={!onMoveDown}
             aria-label={`Bajar ${item.name}`}
           >
-            ▼
+            <Icon name="chevronDown" size={14} />
           </button>
         </div>
       )}
       <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
-        ✎
+        <Icon name="edit" size={17} />
       </button>
       <button className={styles.itemDelete} onClick={() => onDelete(item.id)} aria-label={`Eliminar ${item.name}`}>
-        ✕
+        <Icon name="close" size={17} />
       </button>
     </li>
   )

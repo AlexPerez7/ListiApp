@@ -1,3 +1,4 @@
+import { Icon, type IconName } from './Icon'
 import styles from './TabBar.module.css'
 
 export type Tab = 'lists' | 'categories'
@@ -7,9 +8,9 @@ interface TabBarProps {
   onChange: (tab: Tab) => void
 }
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'lists', label: 'Listas', icon: '📋' },
-  { id: 'categories', label: 'Categorías', icon: '🏷️' },
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: 'lists', label: 'Listas', icon: 'list' },
+  { id: 'categories', label: 'Categorías', icon: 'tag' },
 ]
 
 export function TabBar({ active, onChange }: TabBarProps) {
@@ -22,7 +23,7 @@ export function TabBar({ active, onChange }: TabBarProps) {
           onClick={() => onChange(tab.id)}
           aria-current={tab.id === active ? 'page' : undefined}
         >
-          <span className={styles.tabIcon}>{tab.icon}</span>
+          <Icon name={tab.icon} size={22} />
           <span className={styles.tabLabel}>{tab.label}</span>
         </button>
       ))}

@@ -1,7 +1,7 @@
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0));
   transform: translateX(-50%);
   width: calc(100% - 32px);
   max-width: 448px;
@@ -15,6 +15,24 @@
   box-shadow: var(--shadow-md);
   padding: 14px 16px;
   z-index: 50;
+  animation: toastIn 0.2s ease;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
 }
 
 .message {
