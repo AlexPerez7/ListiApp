@@ -83,7 +83,7 @@ export function ListDetail({
 
       {list.items.length === 0 ? (
         <div className={styles.empty}>
-          <p>Agregá tu primer ítem arriba.</p>
+          <p>Agrega tu primer ítem arriba.</p>
         </div>
       ) : (
         <div className={styles.groups}>

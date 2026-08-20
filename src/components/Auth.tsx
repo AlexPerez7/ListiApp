@@ -29,7 +29,7 @@ export function Auth() {
     }
 
     if (mode === 'signup') {
-      setInfoMessage('Cuenta creada. Si tu proyecto pide confirmación de email, revisá tu correo antes de entrar.')
+      setInfoMessage('Cuenta creada. Si tu proyecto pide confirmación de email, revisa tu correo antes de entrar.')
     }
   }
 
@@ -38,7 +38,7 @@ export function Auth() {
       <div className={styles.card}>
         <h1 className={styles.title}>ListiApp</h1>
         <p className={styles.subtitle}>
-          {mode === 'login' ? 'Iniciá sesión para ver tus listas' : 'Creá una cuenta'}
+          {mode === 'login' ? 'Inicia sesión para ver tus listas' : 'Crea una cuenta'}
         </p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -79,7 +79,7 @@ export function Auth() {
             setInfoMessage(null)
           }}
         >
-          {mode === 'login' ? '¿No tenés cuenta? Creá una' : '¿Ya tenés cuenta? Iniciá sesión'}
+          {mode === 'login' ? '¿No tienes cuenta? Crea una' : '¿Ya tienes cuenta? Inicia sesión'}
         </button>
       </div>
     </div>

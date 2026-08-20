@@ -53,8 +53,8 @@ export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList,
         </div>
       ) : lists.length === 0 ? (
         <div className={styles.empty}>
-          <p>Todavía no tenés listas.</p>
-          <p>Creá la primera arriba.</p>
+          <p>Todavía no tienes listas.</p>
+          <p>Crea la primera arriba.</p>
         </div>
       ) : (
         <ul className={styles.list}>
