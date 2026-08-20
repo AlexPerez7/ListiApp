@@ -3,7 +3,7 @@ export interface Item {
   name: string
   quantity?: string
   price?: number
-  category?: string
+  categoryId?: string
   done: boolean
   position: number
   createdAt: number
@@ -14,4 +14,11 @@ export interface ShoppingList {
   name: string
   items: Item[]
   createdAt: number
+}
+
+export interface Category {
+  id: string
+  name: string
+  icon: string
+  position: number
 }

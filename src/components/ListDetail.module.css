@@ -275,6 +275,11 @@
   gap: 8px;
 }
 
+.itemCategoryIcon {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
 .itemName {
   font-size: 16px;
   color: var(--color-text);

@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
 import { useShoppingLists } from './hooks/useShoppingLists'
+import { useCategories } from './hooks/useCategories'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
-import { CATEGORIES } from './lib/categories'
 import { Home } from './components/Home'
+import { Categories } from './components/Categories'
 import { ListDetail } from './components/ListDetail'
+import { TabBar, type Tab } from './components/TabBar'
 import { Auth } from './components/Auth'
 import { ResetPassword } from './components/ResetPassword'
 import { Toast } from './components/Toast'
@@ -19,6 +21,7 @@ function App() {
   const [sessionLoading, setSessionLoading] = useState(true)
   const [passwordRecovery, setPasswordRecovery] = useState(false)
   const [selectedListId, setSelectedListId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<Tab>('lists')
   const [toast, setToast] = useState<{ id: number; message: string; onUndo: () => void } | null>(null)
   const toastTimeoutRef = useRef<number | undefined>(undefined)
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme())
@@ -58,17 +61,18 @@ function App() {
     restoreList,
   } = useShoppingLists(session)
 
+  const {
+    categories,
+    loading: categoriesLoading,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+  } = useCategories(session)
+
   const itemSuggestions = useMemo(
     () => Array.from(new Set(lists.flatMap((list) => list.items.map((item) => item.name)))).sort(),
     [lists],
   )
-
-  const categorySuggestions = useMemo(() => {
-    const used = lists.flatMap((list) =>
-      list.items.map((item) => item.category).filter((category): category is string => Boolean(category)),
-    )
-    return Array.from(new Set([...CATEGORIES, ...used])).sort()
-  }, [lists])
 
   function showUndoToast(message: string, onUndo: () => void) {
     window.clearTimeout(toastTimeoutRef.current)
@@ -110,17 +114,17 @@ function App() {
 
   const selectedList = lists.find((list) => list.id === selectedListId) ?? null
 
-  return (
-    <>
-      {selectedList ? (
+  if (selectedList) {
+    return (
+      <>
         <ListDetail
           list={selectedList}
+          categories={categories}
           itemSuggestions={itemSuggestions}
-          categorySuggestions={categorySuggestions}
           onBack={() => setSelectedListId(null)}
           onAddItem={(name, quantity) => addItem(selectedList.id, name, quantity)}
-          onUpdateItem={(itemId, name, quantity, category, price) =>
-            updateItem(selectedList.id, itemId, name, quantity, category, price)
+          onUpdateItem={(itemId, name, quantity, categoryId, price) =>
+            updateItem(selectedList.id, itemId, name, quantity, categoryId, price)
           }
           onToggleItem={(itemId) => toggleItem(selectedList.id, itemId)}
           onDeleteItem={(itemId) => {
@@ -132,22 +136,41 @@ function App() {
           onUpdateListName={(name) => updateListName(selectedList.id, name)}
           onDeleteList={() => handleDeleteList(selectedList)}
         />
-      ) : (
-        <Home
-          lists={lists}
-          loading={loading}
-          theme={theme}
-          onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-          onCreateList={(name) => setSelectedListId(createList(name))}
-          onSelectList={setSelectedListId}
-          onDuplicateList={duplicateList}
-          onDeleteList={(id) => {
-            const list = lists.find((l) => l.id === id)
-            if (list) handleDeleteList(list)
-          }}
-          onSignOut={() => supabase.auth.signOut()}
-        />
-      )}
+        {toast && <Toast message={toast.message} actionLabel="Deshacer" onAction={toast.onUndo} />}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <div className={styles.tabContent}>
+        {activeTab === 'lists' ? (
+          <Home
+            lists={lists}
+            loading={loading}
+            theme={theme}
+            onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+            onCreateList={(name) => setSelectedListId(createList(name))}
+            onSelectList={setSelectedListId}
+            onDuplicateList={duplicateList}
+            onDeleteList={(id) => {
+              const list = lists.find((l) => l.id === id)
+              if (list) handleDeleteList(list)
+            }}
+            onSignOut={() => supabase.auth.signOut()}
+          />
+        ) : (
+          <Categories
+            categories={categories}
+            loading={categoriesLoading}
+            onCreate={createCategory}
+            onUpdate={updateCategory}
+            onDelete={deleteCategory}
+          />
+        )}
+      </div>
+
+      <TabBar active={activeTab} onChange={setActiveTab} />
 
       {toast && <Toast message={toast.message} actionLabel="Deshacer" onAction={toast.onUndo} />}
     </>
