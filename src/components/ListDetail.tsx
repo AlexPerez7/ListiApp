@@ -1,11 +1,12 @@
 import { memo, useCallback, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
 import type { Item, ShoppingList } from '../types'
-import { CATEGORIES, UNCATEGORIZED_LABEL } from '../lib/categories'
+import { UNCATEGORIZED_LABEL } from '../lib/categories'
 import styles from './ListDetail.module.css'
 
 interface ListDetailProps {
   list: ShoppingList
   itemSuggestions: string[]
+  categorySuggestions: string[]
   onBack: () => void
   onAddItem: (name: string, quantity?: string) => void
   onUpdateItem: (itemId: string, name: string, quantity?: string, category?: string, price?: number) => void
@@ -55,6 +56,7 @@ function formatPrice(value: number): string {
 export function ListDetail({
   list,
   itemSuggestions,
+  categorySuggestions,
   onBack,
   onAddItem,
   onUpdateItem,
@@ -210,6 +212,11 @@ export function ListDetail({
           <option key={suggestion} value={suggestion} />
         ))}
       </datalist>
+      <datalist id="category-suggestions">
+        {categorySuggestions.map((category) => (
+          <option key={category} value={category} />
+        ))}
+      </datalist>
 
       {list.items.length > 3 && (
         <input
@@ -333,18 +340,13 @@ const ItemRow = memo(function ItemRow({ item, onToggle, onDelete, onSave, onMove
             />
           </div>
           <div className={styles.editRow}>
-            <select
-              className={styles.editSelectCategory}
+            <input
+              className={styles.editInputCategory}
               value={categoryDraft}
               onChange={(e) => setCategoryDraft(e.target.value)}
-            >
-              <option value="">Sin categoría</option>
-              {CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+              list="category-suggestions"
+              placeholder="Categoría (ej: Lácteos)"
+            />
             <input
               className={styles.editInputPrice}
               type="number"
