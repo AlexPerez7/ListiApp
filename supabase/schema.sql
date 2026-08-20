@@ -81,6 +81,16 @@ insert into storage.buckets (id, name, public)
 values ('item-images', 'item-images', true)
 on conflict (id) do nothing;
 
+-- La policy de select es necesaria aunque el bucket sea publico: al subir
+-- con upsert (reemplazar una foto ya existente), Postgres hace un
+-- INSERT ... ON CONFLICT DO UPDATE, y para eso RLS necesita poder "ver"
+-- la fila existente via una policy de select, si no el update-por-conflicto
+-- se rechaza con "new row violates row-level security policy".
+create policy "Users can read their own item images"
+  on storage.objects for select
+  to authenticated
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
 create policy "Users can upload their own item images"
   on storage.objects for insert
   to authenticated
@@ -89,7 +99,8 @@ create policy "Users can upload their own item images"
 create policy "Users can update their own item images"
   on storage.objects for update
   to authenticated
-  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text)
+  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 create policy "Users can delete their own item images"
   on storage.objects for delete
@@ -173,6 +184,12 @@ insert into storage.buckets (id, name, public)
 values ('item-images', 'item-images', true)
 on conflict (id) do nothing;
 
+drop policy if exists "Users can read their own item images" on storage.objects;
+create policy "Users can read their own item images"
+  on storage.objects for select
+  to authenticated
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
 drop policy if exists "Users can upload their own item images" on storage.objects;
 create policy "Users can upload their own item images"
   on storage.objects for insert
@@ -183,7 +200,8 @@ drop policy if exists "Users can update their own item images" on storage.object
 create policy "Users can update their own item images"
   on storage.objects for update
   to authenticated
-  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text)
+  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "Users can delete their own item images" on storage.objects;
 create policy "Users can delete their own item images"
