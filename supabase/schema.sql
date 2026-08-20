@@ -19,6 +19,12 @@ create table public.items (
 );
 
 create index items_list_id_idx on public.items (list_id);
+create index lists_user_id_idx on public.lists (user_id);
+
+-- Necesario para que los eventos DELETE de Realtime incluyan la fila completa
+-- (por defecto solo incluyen la clave primaria), usado para mergear cambios sin refetch.
+alter table public.lists replica identity full;
+alter table public.items replica identity full;
 
 alter table public.lists enable row level security;
 alter table public.items enable row level security;

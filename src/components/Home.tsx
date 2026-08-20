@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { memo, useCallback, useMemo, useState, type FormEvent } from 'react'
 import type { ShoppingList } from '../types'
 import styles from './Home.module.css'
 
@@ -21,6 +21,9 @@ export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList,
     onCreateList(trimmed)
     setName('')
   }
+
+  const handleSelectList = useCallback((id: string) => onSelectList(id), [onSelectList])
+  const handleDeleteList = useCallback((id: string) => onDeleteList(id), [onDeleteList])
 
   return (
     <div className={styles.page}>
@@ -58,33 +61,42 @@ export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList,
         </div>
       ) : (
         <ul className={styles.list}>
-          {lists.map((list) => {
-            const total = list.items.length
-            const done = list.items.filter((item) => item.done).length
-            return (
-              <li key={list.id} className={styles.card}>
-                <button className={styles.cardMain} onClick={() => onSelectList(list.id)}>
-                  <span className={styles.cardName}>{list.name}</span>
-                  <span className={styles.cardMeta}>
-                    {total === 0 ? 'Sin ítems' : `${done} de ${total} comprados`}
-                  </span>
-                </button>
-                <button
-                  className={styles.deleteButton}
-                  aria-label={`Eliminar lista ${list.name}`}
-                  onClick={() => {
-                    if (confirm(`¿Eliminar la lista "${list.name}"?`)) {
-                      onDeleteList(list.id)
-                    }
-                  }}
-                >
-                  ✕
-                </button>
-              </li>
-            )
-          })}
+          {lists.map((list) => (
+            <ListCard key={list.id} list={list} onSelect={handleSelectList} onDelete={handleDeleteList} />
+          ))}
         </ul>
       )}
     </div>
   )
 }
+
+interface ListCardProps {
+  list: ShoppingList
+  onSelect: (id: string) => void
+  onDelete: (id: string) => void
+}
+
+const ListCard = memo(function ListCard({ list, onSelect, onDelete }: ListCardProps) {
+  const total = list.items.length
+  const done = useMemo(() => list.items.filter((item) => item.done).length, [list.items])
+
+  return (
+    <li className={styles.card}>
+      <button className={styles.cardMain} onClick={() => onSelect(list.id)}>
+        <span className={styles.cardName}>{list.name}</span>
+        <span className={styles.cardMeta}>{total === 0 ? 'Sin ítems' : `${done} de ${total} comprados`}</span>
+      </button>
+      <button
+        className={styles.deleteButton}
+        aria-label={`Eliminar lista ${list.name}`}
+        onClick={() => {
+          if (confirm(`¿Eliminar la lista "${list.name}"?`)) {
+            onDelete(list.id)
+          }
+        }}
+      >
+        ✕
+      </button>
+    </li>
+  )
+})

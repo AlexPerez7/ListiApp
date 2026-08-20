@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { memo, useCallback, useMemo, useState, type FormEvent } from 'react'
 import type { Item, ShoppingList } from '../types'
 import styles from './ListDetail.module.css'
 
@@ -31,8 +31,11 @@ export function ListDetail({
     setQuantity('')
   }
 
-  const pending = list.items.filter((item) => !item.done)
-  const done = list.items.filter((item) => item.done)
+  const pending = useMemo(() => list.items.filter((item) => !item.done), [list.items])
+  const done = useMemo(() => list.items.filter((item) => item.done), [list.items])
+
+  const handleToggle = useCallback((itemId: string) => onToggleItem(itemId), [onToggleItem])
+  const handleDelete = useCallback((itemId: string) => onDeleteItem(itemId), [onDeleteItem])
 
   return (
     <div className={styles.page}>
@@ -90,12 +93,7 @@ export function ListDetail({
           {pending.length > 0 && (
             <ul className={styles.itemList}>
               {pending.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  onToggle={() => onToggleItem(item.id)}
-                  onDelete={() => onDeleteItem(item.id)}
-                />
+                <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} />
               ))}
             </ul>
           )}
@@ -104,12 +102,7 @@ export function ListDetail({
               <p className={styles.doneLabel}>Comprados</p>
               <ul className={styles.itemList}>
                 {done.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    onToggle={() => onToggleItem(item.id)}
-                    onDelete={() => onDeleteItem(item.id)}
-                  />
+                  <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} />
                 ))}
               </ul>
             </div>
@@ -122,27 +115,27 @@ export function ListDetail({
 
 interface ItemRowProps {
   item: Item
-  onToggle: () => void
-  onDelete: () => void
+  onToggle: (itemId: string) => void
+  onDelete: (itemId: string) => void
 }
 
-function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
+const ItemRow = memo(function ItemRow({ item, onToggle, onDelete }: ItemRowProps) {
   return (
     <li className={`${styles.item} ${item.done ? styles.itemDone : ''}`}>
       <button
         className={styles.checkbox}
-        onClick={onToggle}
+        onClick={() => onToggle(item.id)}
         aria-label={item.done ? 'Marcar como pendiente' : 'Marcar como comprado'}
       >
         {item.done && <span className={styles.checkmark}>✓</span>}
       </button>
-      <button className={styles.itemMain} onClick={onToggle}>
+      <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
         <span className={styles.itemName}>{item.name}</span>
         {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}
       </button>
-      <button className={styles.itemDelete} onClick={onDelete} aria-label={`Eliminar ${item.name}`}>
+      <button className={styles.itemDelete} onClick={() => onDelete(item.id)} aria-label={`Eliminar ${item.name}`}>
         ✕
       </button>
     </li>
   )
-}
+})

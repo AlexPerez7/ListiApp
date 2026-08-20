@@ -3,6 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import type { Item, ShoppingList } from '../types'
 
+const LISTS_LIMIT = 200
+
 interface DbItem {
   id: string
   list_id: string
@@ -12,10 +14,13 @@ interface DbItem {
   created_at: string
 }
 
-interface DbList {
+interface DbListRow {
   id: string
   name: string
   created_at: string
+}
+
+interface DbList extends DbListRow {
   items: DbItem[]
 }
 
@@ -50,6 +55,7 @@ export function useShoppingLists(session: Session | null) {
       .from('lists')
       .select('id, name, created_at, items(id, list_id, name, quantity, done, created_at)')
       .order('created_at', { ascending: false })
+      .limit(LISTS_LIMIT)
 
     if (error) {
       console.error('Error al cargar listas:', error.message)
@@ -70,8 +76,56 @@ export function useShoppingLists(session: Session | null) {
 
     const channel = supabase
       .channel('shopping-lists-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, fetchLists)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, fetchLists)
+      .on<DbListRow>(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lists' },
+        (payload) => {
+          setLists((prev) => {
+            if (payload.eventType === 'DELETE') {
+              const deletedId = payload.old.id
+              return prev.filter((list) => list.id !== deletedId)
+            }
+
+            const row = payload.new
+            const existing = prev.find((list) => list.id === row.id)
+            const next = existing
+              ? prev.map((list) =>
+                  list.id === row.id
+                    ? { ...list, name: row.name, createdAt: new Date(row.created_at).getTime() }
+                    : list,
+                )
+              : [{ id: row.id, name: row.name, createdAt: new Date(row.created_at).getTime(), items: [] }, ...prev]
+
+            return next.slice().sort((a, b) => b.createdAt - a.createdAt)
+          })
+        },
+      )
+      .on<DbItem>(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items' },
+        (payload) => {
+          setLists((prev) => {
+            if (payload.eventType === 'DELETE') {
+              const deletedId = payload.old.id
+              return prev.map((list) => ({
+                ...list,
+                items: list.items.filter((item) => item.id !== deletedId),
+              }))
+            }
+
+            const row = payload.new
+            const mapped = mapItem(row)
+            return prev.map((list) => {
+              if (list.id !== row.list_id) return list
+              const existing = list.items.find((item) => item.id === row.id)
+              const items = existing
+                ? list.items.map((item) => (item.id === row.id ? mapped : item))
+                : [...list.items, mapped].sort((a, b) => a.createdAt - b.createdAt)
+              return { ...list, items }
+            })
+          })
+        },
+      )
       .subscribe()
 
     return () => {
