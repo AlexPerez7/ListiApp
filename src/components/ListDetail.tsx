@@ -338,6 +338,7 @@ const ItemRow = memo(function ItemRow({
   const [categoryIdDraft, setCategoryIdDraft] = useState(item.categoryId ?? '')
   const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
 
   const category = item.categoryId ? categories.find((c) => c.id === item.categoryId) : undefined
 
@@ -369,8 +370,11 @@ const ItemRow = memo(function ItemRow({
     e.target.value = ''
     if (!file) return
     setUploadingImage(true)
+    setImageError(null)
     try {
       await onUploadImage(item.id, file)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'No se pudo subir la foto')
     } finally {
       setUploadingImage(false)
     }
@@ -404,6 +408,7 @@ const ItemRow = memo(function ItemRow({
               </button>
             )}
           </div>
+          {imageError && <p className={styles.editImageError}>{imageError}</p>}
           <div className={styles.editRow}>
             <input
               className={styles.editInputName}
