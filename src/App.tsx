@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
 import { useShoppingLists } from './hooks/useShoppingLists'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
+import { CATEGORIES } from './lib/categories'
 import { Home } from './components/Home'
 import { ListDetail } from './components/ListDetail'
 import { Auth } from './components/Auth'
@@ -62,6 +63,13 @@ function App() {
     [lists],
   )
 
+  const categorySuggestions = useMemo(() => {
+    const used = lists.flatMap((list) =>
+      list.items.map((item) => item.category).filter((category): category is string => Boolean(category)),
+    )
+    return Array.from(new Set([...CATEGORIES, ...used])).sort()
+  }, [lists])
+
   function showUndoToast(message: string, onUndo: () => void) {
     window.clearTimeout(toastTimeoutRef.current)
     const id = Date.now()
@@ -108,6 +116,7 @@ function App() {
         <ListDetail
           list={selectedList}
           itemSuggestions={itemSuggestions}
+          categorySuggestions={categorySuggestions}
           onBack={() => setSelectedListId(null)}
           onAddItem={(name, quantity) => addItem(selectedList.id, name, quantity)}
           onUpdateItem={(itemId, name, quantity, category, price) =>
