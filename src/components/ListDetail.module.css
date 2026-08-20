@@ -14,7 +14,8 @@
 }
 
 .backButton,
-.deleteListButton {
+.deleteListButton,
+.iconButton {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
@@ -29,12 +30,23 @@
   justify-content: center;
 }
 
-.deleteListButton {
+.deleteListButton,
+.iconButton {
   color: var(--color-text-secondary);
 }
 
 .deleteListButton:active {
   color: #dc2626;
+}
+
+.iconButton:active {
+  color: var(--color-primary-dark);
+}
+
+.shareStatus {
+  font-size: 13px;
+  color: var(--color-primary-dark);
+  text-align: center;
 }
 
 .headerText {
@@ -50,6 +62,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.titleInput {
+  width: 100%;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  border: none;
+  border-bottom: 2px solid var(--color-primary);
+  background: none;
+  padding: 0 0 2px;
+}
+
+.titleInput:focus {
+  outline: none;
 }
 
 .subtitle {
@@ -140,13 +168,32 @@
   gap: 10px;
 }
 
+.doneHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
 .doneLabel {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  padding-left: 4px;
+}
+
+.clearCompletedButton {
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.clearCompletedButton:active {
+  color: #dc2626;
 }
 
 .item {
@@ -218,9 +265,10 @@
   color: var(--color-text-secondary);
 }
 
+.itemEdit,
 .itemDelete {
   flex-shrink: 0;
-  width: 44px;
+  width: 40px;
   height: 44px;
   border: none;
   background: none;
@@ -230,4 +278,69 @@
 
 .itemDelete:active {
   color: #dc2626;
+}
+
+.itemEdit:active {
+  color: var(--color-primary-dark);
+}
+
+.editForm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px;
+}
+
+.editInputName {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.editInputQty {
+  width: 64px;
+  flex-shrink: 0;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.editInputName:focus,
+.editInputQty:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.editSaveButton,
+.editCancelButton {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.editSaveButton {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.editSaveButton:disabled {
+  opacity: 0.5;
+}
+
+.editCancelButton {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
 }

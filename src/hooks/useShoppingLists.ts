@@ -177,6 +177,111 @@ export function useShoppingLists(session: Session | null) {
       })
   }
 
+  function updateItem(listId: string, itemId: string, name: string, quantity?: string) {
+    const trimmedQuantity = quantity?.trim() || undefined
+
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === listId
+          ? {
+              ...list,
+              items: list.items.map((item) =>
+                item.id === itemId ? { ...item, name, quantity: trimmedQuantity } : item,
+              ),
+            }
+          : list,
+      ),
+    )
+
+    supabase
+      .from('items')
+      .update({ name, quantity: trimmedQuantity ?? null })
+      .eq('id', itemId)
+      .then(({ error }) => {
+        if (error) console.error('Error al editar ítem:', error.message)
+      })
+  }
+
+  function updateListName(listId: string, name: string) {
+    setLists((prev) => prev.map((list) => (list.id === listId ? { ...list, name } : list)))
+
+    supabase
+      .from('lists')
+      .update({ name })
+      .eq('id', listId)
+      .then(({ error }) => {
+        if (error) console.error('Error al renombrar lista:', error.message)
+      })
+  }
+
+  function clearCompleted(listId: string) {
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === listId ? { ...list, items: list.items.filter((item) => !item.done) } : list,
+      ),
+    )
+
+    supabase
+      .from('items')
+      .delete()
+      .eq('list_id', listId)
+      .eq('done', true)
+      .then(({ error }) => {
+        if (error) console.error('Error al vaciar comprados:', error.message)
+      })
+  }
+
+  function restoreItem(listId: string, item: Item) {
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === listId
+          ? { ...list, items: [...list.items, item].sort((a, b) => a.createdAt - b.createdAt) }
+          : list,
+      ),
+    )
+
+    supabase
+      .from('items')
+      .insert({
+        id: item.id,
+        list_id: listId,
+        name: item.name,
+        quantity: item.quantity ?? null,
+        done: item.done,
+        created_at: new Date(item.createdAt).toISOString(),
+      })
+      .then(({ error }) => {
+        if (error) console.error('Error al restaurar ítem:', error.message)
+      })
+  }
+
+  function restoreList(list: ShoppingList) {
+    setLists((prev) => [...prev, list].sort((a, b) => b.createdAt - a.createdAt))
+
+    supabase
+      .from('lists')
+      .insert({ id: list.id, name: list.name, created_at: new Date(list.createdAt).toISOString() })
+      .then(async ({ error }) => {
+        if (error) {
+          console.error('Error al restaurar lista:', error.message)
+          return
+        }
+        if (list.items.length === 0) return
+
+        const { error: itemsError } = await supabase.from('items').insert(
+          list.items.map((item) => ({
+            id: item.id,
+            list_id: list.id,
+            name: item.name,
+            quantity: item.quantity ?? null,
+            done: item.done,
+            created_at: new Date(item.createdAt).toISOString(),
+          })),
+        )
+        if (itemsError) console.error('Error al restaurar ítems:', itemsError.message)
+      })
+  }
+
   function toggleItem(listId: string, itemId: string) {
     const list = lists.find((l) => l.id === listId)
     const item = list?.items.find((i) => i.id === itemId)
@@ -216,5 +321,18 @@ export function useShoppingLists(session: Session | null) {
       })
   }
 
-  return { lists, loading, createList, deleteList, addItem, toggleItem, deleteItem }
+  return {
+    lists,
+    loading,
+    createList,
+    deleteList,
+    addItem,
+    updateItem,
+    toggleItem,
+    deleteItem,
+    updateListName,
+    clearCompleted,
+    restoreItem,
+    restoreList,
+  }
 }
