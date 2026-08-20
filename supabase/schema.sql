@@ -83,15 +83,18 @@ on conflict (id) do nothing;
 
 create policy "Users can upload their own item images"
   on storage.objects for insert
-  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+  to authenticated
+  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 create policy "Users can update their own item images"
   on storage.objects for update
-  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+  to authenticated
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 create policy "Users can delete their own item images"
   on storage.objects for delete
-  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+  to authenticated
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- Migración: si ya corriste este script antes de que existieran las columnas
 -- category/price/position, corré solo este bloque (podés pegarlo solo, es
@@ -173,14 +176,17 @@ on conflict (id) do nothing;
 drop policy if exists "Users can upload their own item images" on storage.objects;
 create policy "Users can upload their own item images"
   on storage.objects for insert
-  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+  to authenticated
+  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "Users can update their own item images" on storage.objects;
 create policy "Users can update their own item images"
   on storage.objects for update
-  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+  to authenticated
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 drop policy if exists "Users can delete their own item images" on storage.objects;
 create policy "Users can delete their own item images"
   on storage.objects for delete
-  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+  to authenticated
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
