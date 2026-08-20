@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useState, type FormEvent } from 'react'
 import type { ShoppingList } from '../types'
 import type { Theme } from '../lib/theme'
 import { Icon } from './Icon'
+import { Logo } from './Logo'
 import { SkeletonList } from './Skeleton'
 import styles from './Home.module.css'
 
@@ -52,9 +53,12 @@ export function Home({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>ListiApp</h1>
-          <p className={styles.subtitle}>Tus listas de compras</p>
+        <div className={styles.brand}>
+          <Logo size={36} className={styles.logo} />
+          <div>
+            <h1 className={styles.title}>ListiApp</h1>
+            <p className={styles.subtitle}>Tus listas de compras</p>
+          </div>
         </div>
         <div className={styles.headerActions}>
           <button
