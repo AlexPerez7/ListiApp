@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { Logo } from './Logo'
 import styles from './Auth.module.css'
 
 export function Auth() {
@@ -55,6 +56,7 @@ export function Auth() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
+        <Logo size={56} className={styles.logo} />
         <h1 className={styles.title}>ListiApp</h1>
         <p className={styles.subtitle}>
           {mode === 'login' && 'Inicia sesión para ver tus listas'}

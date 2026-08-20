@@ -17,6 +17,11 @@
   gap: 4px;
 }
 
+.logo {
+  align-self: center;
+  margin-bottom: 8px;
+}
+
 .title {
   font-size: 26px;
   font-weight: 700;
