@@ -116,7 +116,7 @@ function App() {
           list={selectedList}
           categories={categories}
           onBack={() => setSelectedListId(null)}
-          onAddItem={(name, quantity) => addItem(selectedList.id, name, quantity)}
+          onAddItem={(name, quantity, categoryId) => addItem(selectedList.id, name, quantity, categoryId)}
           onUpdateItem={(itemId, name, quantity, categoryId, price) =>
             updateItem(selectedList.id, itemId, name, quantity, categoryId, price)
           }
