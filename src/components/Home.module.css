@@ -21,9 +21,27 @@
   letter-spacing: -0.3px;
 }
 
-.signOutButton {
+.headerActions {
   flex-shrink: 0;
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.themeButton {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signOutButton {
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
@@ -33,7 +51,8 @@
   font-weight: 600;
 }
 
-.signOutButton:active {
+.signOutButton:active,
+.themeButton:active {
   background: rgba(31, 41, 55, 0.05);
 }
 
@@ -87,6 +106,20 @@
   cursor: not-allowed;
 }
 
+.searchInput {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.searchInput:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
 .empty {
   text-align: center;
   color: var(--color-text-secondary);
@@ -138,15 +171,21 @@
   color: var(--color-text-secondary);
 }
 
+.duplicateButton,
 .deleteButton {
-  width: 52px;
+  width: 48px;
   border: none;
   background: none;
   color: var(--color-text-secondary);
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .deleteButton:active {
   background: rgba(31, 41, 55, 0.05);
   color: #dc2626;
+}
+
+.duplicateButton:active {
+  background: rgba(31, 41, 55, 0.05);
+  color: var(--color-primary-dark);
 }

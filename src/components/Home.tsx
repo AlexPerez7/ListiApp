@@ -1,18 +1,33 @@
 import { memo, useCallback, useMemo, useState, type FormEvent } from 'react'
 import type { ShoppingList } from '../types'
+import type { Theme } from '../lib/theme'
 import styles from './Home.module.css'
 
 interface HomeProps {
   lists: ShoppingList[]
   loading: boolean
+  theme: Theme
+  onToggleTheme: () => void
   onCreateList: (name: string) => void
   onSelectList: (id: string) => void
+  onDuplicateList: (id: string) => void
   onDeleteList: (id: string) => void
   onSignOut: () => void
 }
 
-export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList, onSignOut }: HomeProps) {
+export function Home({
+  lists,
+  loading,
+  theme,
+  onToggleTheme,
+  onCreateList,
+  onSelectList,
+  onDuplicateList,
+  onDeleteList,
+  onSignOut,
+}: HomeProps) {
   const [name, setName] = useState('')
+  const [query, setQuery] = useState('')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -23,7 +38,14 @@ export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList,
   }
 
   const handleSelectList = useCallback((id: string) => onSelectList(id), [onSelectList])
+  const handleDuplicateList = useCallback((id: string) => onDuplicateList(id), [onDuplicateList])
   const handleDeleteList = useCallback((id: string) => onDeleteList(id), [onDeleteList])
+
+  const filteredLists = useMemo(() => {
+    const trimmed = query.trim().toLowerCase()
+    if (!trimmed) return lists
+    return lists.filter((list) => list.name.toLowerCase().includes(trimmed))
+  }, [lists, query])
 
   return (
     <div className={styles.page}>
@@ -32,9 +54,18 @@ export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList,
           <h1 className={styles.title}>ListiApp</h1>
           <p className={styles.subtitle}>Tus listas de compras</p>
         </div>
-        <button className={styles.signOutButton} onClick={onSignOut}>
-          Salir
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            className={styles.themeButton}
+            onClick={onToggleTheme}
+            aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+          <button className={styles.signOutButton} onClick={onSignOut}>
+            Salir
+          </button>
+        </div>
       </header>
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -50,6 +81,17 @@ export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList,
         </button>
       </form>
 
+      {lists.length > 0 && (
+        <input
+          className={styles.searchInput}
+          type="search"
+          placeholder="Buscar lista…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Buscar lista"
+        />
+      )}
+
       {loading ? (
         <div className={styles.empty}>
           <p>Cargando tus listas…</p>
@@ -59,10 +101,20 @@ export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList,
           <p>Todavía no tienes listas.</p>
           <p>Crea la primera arriba.</p>
         </div>
+      ) : filteredLists.length === 0 ? (
+        <div className={styles.empty}>
+          <p>Ninguna lista coincide con "{query}".</p>
+        </div>
       ) : (
         <ul className={styles.list}>
-          {lists.map((list) => (
-            <ListCard key={list.id} list={list} onSelect={handleSelectList} onDelete={handleDeleteList} />
+          {filteredLists.map((list) => (
+            <ListCard
+              key={list.id}
+              list={list}
+              onSelect={handleSelectList}
+              onDuplicate={handleDuplicateList}
+              onDelete={handleDeleteList}
+            />
           ))}
         </ul>
       )}
@@ -73,10 +125,11 @@ export function Home({ lists, loading, onCreateList, onSelectList, onDeleteList,
 interface ListCardProps {
   list: ShoppingList
   onSelect: (id: string) => void
+  onDuplicate: (id: string) => void
   onDelete: (id: string) => void
 }
 
-const ListCard = memo(function ListCard({ list, onSelect, onDelete }: ListCardProps) {
+const ListCard = memo(function ListCard({ list, onSelect, onDuplicate, onDelete }: ListCardProps) {
   const total = list.items.length
   const done = useMemo(() => list.items.filter((item) => item.done).length, [list.items])
 
@@ -85,6 +138,13 @@ const ListCard = memo(function ListCard({ list, onSelect, onDelete }: ListCardPr
       <button className={styles.cardMain} onClick={() => onSelect(list.id)}>
         <span className={styles.cardName}>{list.name}</span>
         <span className={styles.cardMeta}>{total === 0 ? 'Sin ítems' : `${done} de ${total} comprados`}</span>
+      </button>
+      <button
+        className={styles.duplicateButton}
+        aria-label={`Duplicar lista ${list.name}`}
+        onClick={() => onDuplicate(list.id)}
+      >
+        ⧉
       </button>
       <button
         className={styles.deleteButton}

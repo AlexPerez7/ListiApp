@@ -25,6 +25,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root[data-theme='dark'] {
+  --color-primary: #4caf93;
+  --color-primary-dark: #7fd8bd;
+  --color-bg: #14181c;
+  --color-surface: #1f242b;
+  --color-text: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-accent: #ff8a5b;
+  --color-accent-dark: #ffab85;
+  --color-done-bg: #1d3b30;
+  --color-border: #2c333b;
+
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }

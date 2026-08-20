@@ -10,6 +10,9 @@ interface DbItem {
   list_id: string
   name: string
   quantity: string | null
+  category: string | null
+  price: number | null
+  position: number
   done: boolean
   created_at: string
 }
@@ -29,7 +32,10 @@ function mapItem(row: DbItem): Item {
     id: row.id,
     name: row.name,
     quantity: row.quantity ?? undefined,
+    category: row.category ?? undefined,
+    price: row.price ?? undefined,
     done: row.done,
+    position: row.position,
     createdAt: new Date(row.created_at).getTime(),
   }
 }
@@ -41,7 +47,7 @@ function mapList(row: DbList): ShoppingList {
     createdAt: new Date(row.created_at).getTime(),
     items: row.items
       .slice()
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .sort((a, b) => a.position - b.position)
       .map(mapItem),
   }
 }
@@ -53,7 +59,9 @@ export function useShoppingLists(session: Session | null) {
   const fetchLists = useCallback(async () => {
     const { data, error } = await supabase
       .from('lists')
-      .select('id, name, created_at, items(id, list_id, name, quantity, done, created_at)')
+      .select(
+        'id, name, created_at, items(id, list_id, name, quantity, category, price, position, done, created_at)',
+      )
       .order('created_at', { ascending: false })
       .limit(LISTS_LIMIT)
 
@@ -120,7 +128,7 @@ export function useShoppingLists(session: Session | null) {
               const existing = list.items.find((item) => item.id === row.id)
               const items = existing
                 ? list.items.map((item) => (item.id === row.id ? mapped : item))
-                : [...list.items, mapped].sort((a, b) => a.createdAt - b.createdAt)
+                : [...list.items, mapped].sort((a, b) => a.position - b.position)
               return { ...list, items }
             })
           })
@@ -148,6 +156,48 @@ export function useShoppingLists(session: Session | null) {
     return id
   }
 
+  function duplicateList(listId: string): string | undefined {
+    const original = lists.find((l) => l.id === listId)
+    if (!original) return
+
+    const newListId = crypto.randomUUID()
+    const newList: ShoppingList = {
+      id: newListId,
+      name: `${original.name} (copia)`,
+      createdAt: Date.now(),
+      items: original.items.map((item) => ({ ...item, id: crypto.randomUUID(), done: false })),
+    }
+
+    setLists((prev) => [newList, ...prev])
+
+    supabase
+      .from('lists')
+      .insert({ id: newListId, name: newList.name })
+      .then(async ({ error }) => {
+        if (error) {
+          console.error('Error al duplicar lista:', error.message)
+          return
+        }
+        if (newList.items.length === 0) return
+
+        const { error: itemsError } = await supabase.from('items').insert(
+          newList.items.map((item) => ({
+            id: item.id,
+            list_id: newListId,
+            name: item.name,
+            quantity: item.quantity ?? null,
+            category: item.category ?? null,
+            price: item.price ?? null,
+            position: item.position,
+            done: false,
+          })),
+        )
+        if (itemsError) console.error('Error al duplicar ítems:', itemsError.message)
+      })
+
+    return newListId
+  }
+
   function deleteList(listId: string) {
     setLists((prev) => prev.filter((list) => list.id !== listId))
 
@@ -163,7 +213,14 @@ export function useShoppingLists(session: Session | null) {
   function addItem(listId: string, name: string, quantity?: string) {
     const id = crypto.randomUUID()
     const trimmedQuantity = quantity?.trim() || undefined
-    const newItem: Item = { id, name, quantity: trimmedQuantity, done: false, createdAt: Date.now() }
+    const newItem: Item = {
+      id,
+      name,
+      quantity: trimmedQuantity,
+      done: false,
+      position: Date.now(),
+      createdAt: Date.now(),
+    }
 
     setLists((prev) =>
       prev.map((list) => (list.id === listId ? { ...list, items: [...list.items, newItem] } : list)),
@@ -171,14 +228,22 @@ export function useShoppingLists(session: Session | null) {
 
     supabase
       .from('items')
-      .insert({ id, list_id: listId, name, quantity: trimmedQuantity ?? null })
+      .insert({ id, list_id: listId, name, quantity: trimmedQuantity ?? null, position: newItem.position })
       .then(({ error }) => {
         if (error) console.error('Error al agregar ítem:', error.message)
       })
   }
 
-  function updateItem(listId: string, itemId: string, name: string, quantity?: string) {
+  function updateItem(
+    listId: string,
+    itemId: string,
+    name: string,
+    quantity?: string,
+    category?: string,
+    price?: number,
+  ) {
     const trimmedQuantity = quantity?.trim() || undefined
+    const trimmedCategory = category?.trim() || undefined
 
     setLists((prev) =>
       prev.map((list) =>
@@ -186,7 +251,9 @@ export function useShoppingLists(session: Session | null) {
           ? {
               ...list,
               items: list.items.map((item) =>
-                item.id === itemId ? { ...item, name, quantity: trimmedQuantity } : item,
+                item.id === itemId
+                  ? { ...item, name, quantity: trimmedQuantity, category: trimmedCategory, price }
+                  : item,
               ),
             }
           : list,
@@ -195,11 +262,46 @@ export function useShoppingLists(session: Session | null) {
 
     supabase
       .from('items')
-      .update({ name, quantity: trimmedQuantity ?? null })
+      .update({
+        name,
+        quantity: trimmedQuantity ?? null,
+        category: trimmedCategory ?? null,
+        price: price ?? null,
+      })
       .eq('id', itemId)
       .then(({ error }) => {
         if (error) console.error('Error al editar ítem:', error.message)
       })
+  }
+
+  function swapItemPositions(listId: string, itemId: string, neighborId: string) {
+    const list = lists.find((l) => l.id === listId)
+    const item = list?.items.find((i) => i.id === itemId)
+    const neighbor = list?.items.find((i) => i.id === neighborId)
+    if (!item || !neighbor) return
+
+    setLists((prev) =>
+      prev.map((l) =>
+        l.id === listId
+          ? {
+              ...l,
+              items: l.items.map((i) => {
+                if (i.id === item.id) return { ...i, position: neighbor.position }
+                if (i.id === neighbor.id) return { ...i, position: item.position }
+                return i
+              }),
+            }
+          : l,
+      ),
+    )
+
+    Promise.all([
+      supabase.from('items').update({ position: neighbor.position }).eq('id', item.id),
+      supabase.from('items').update({ position: item.position }).eq('id', neighbor.id),
+    ]).then(([a, b]) => {
+      if (a.error) console.error('Error al reordenar ítem:', a.error.message)
+      if (b.error) console.error('Error al reordenar ítem:', b.error.message)
+    })
   }
 
   function updateListName(listId: string, name: string) {
@@ -235,7 +337,7 @@ export function useShoppingLists(session: Session | null) {
     setLists((prev) =>
       prev.map((list) =>
         list.id === listId
-          ? { ...list, items: [...list.items, item].sort((a, b) => a.createdAt - b.createdAt) }
+          ? { ...list, items: [...list.items, item].sort((a, b) => a.position - b.position) }
           : list,
       ),
     )
@@ -247,6 +349,9 @@ export function useShoppingLists(session: Session | null) {
         list_id: listId,
         name: item.name,
         quantity: item.quantity ?? null,
+        category: item.category ?? null,
+        price: item.price ?? null,
+        position: item.position,
         done: item.done,
         created_at: new Date(item.createdAt).toISOString(),
       })
@@ -274,6 +379,9 @@ export function useShoppingLists(session: Session | null) {
             list_id: list.id,
             name: item.name,
             quantity: item.quantity ?? null,
+            category: item.category ?? null,
+            price: item.price ?? null,
+            position: item.position,
             done: item.done,
             created_at: new Date(item.createdAt).toISOString(),
           })),
@@ -325,9 +433,11 @@ export function useShoppingLists(session: Session | null) {
     lists,
     loading,
     createList,
+    duplicateList,
     deleteList,
     addItem,
     updateItem,
+    swapItemPositions,
     toggleItem,
     deleteItem,
     updateListName,

@@ -1,17 +1,43 @@
 import { memo, useCallback, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
 import type { Item, ShoppingList } from '../types'
+import { CATEGORIES, UNCATEGORIZED_LABEL } from '../lib/categories'
 import styles from './ListDetail.module.css'
 
 interface ListDetailProps {
   list: ShoppingList
+  itemSuggestions: string[]
   onBack: () => void
   onAddItem: (name: string, quantity?: string) => void
-  onUpdateItem: (itemId: string, name: string, quantity?: string) => void
+  onUpdateItem: (itemId: string, name: string, quantity?: string, category?: string, price?: number) => void
   onToggleItem: (itemId: string) => void
   onDeleteItem: (itemId: string) => void
+  onMoveItem: (itemId: string, neighborId: string) => void
   onClearCompleted: () => void
   onUpdateListName: (name: string) => void
   onDeleteList: () => void
+}
+
+interface ItemGroup {
+  category: string
+  items: Item[]
+}
+
+function groupByCategory(items: Item[]): ItemGroup[] {
+  const sorted = [...items].sort((a, b) => a.position - b.position)
+  const map = new Map<string, Item[]>()
+  for (const item of sorted) {
+    const key = item.category?.trim() || UNCATEGORIZED_LABEL
+    const bucket = map.get(key)
+    if (bucket) bucket.push(item)
+    else map.set(key, [item])
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => {
+      if (a === UNCATEGORIZED_LABEL) return 1
+      if (b === UNCATEGORIZED_LABEL) return -1
+      return a.localeCompare(b)
+    })
+    .map(([category, categoryItems]) => ({ category, items: categoryItems }))
 }
 
 function buildShareText(list: ShoppingList): string {
@@ -22,13 +48,19 @@ function buildShareText(list: ShoppingList): string {
   return `${list.name}\n\n${lines.join('\n')}`
 }
 
+function formatPrice(value: number): string {
+  return value.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 })
+}
+
 export function ListDetail({
   list,
+  itemSuggestions,
   onBack,
   onAddItem,
   onUpdateItem,
   onToggleItem,
   onDeleteItem,
+  onMoveItem,
   onClearCompleted,
   onUpdateListName,
   onDeleteList,
@@ -38,6 +70,7 @@ export function ListDetail({
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(list.name)
   const [shareStatus, setShareStatus] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -48,13 +81,26 @@ export function ListDetail({
     setQuantity('')
   }
 
-  const pending = useMemo(() => list.items.filter((item) => !item.done), [list.items])
-  const done = useMemo(() => list.items.filter((item) => item.done), [list.items])
+  const filteredItems = useMemo(() => {
+    const trimmed = query.trim().toLowerCase()
+    if (!trimmed) return list.items
+    return list.items.filter((item) => item.name.toLowerCase().includes(trimmed))
+  }, [list.items, query])
+
+  const pending = useMemo(() => filteredItems.filter((item) => !item.done), [filteredItems])
+  const done = useMemo(() => filteredItems.filter((item) => item.done), [filteredItems])
+  const pendingGroups = useMemo(() => groupByCategory(pending), [pending])
+
+  const pendingTotal = useMemo(
+    () => pending.reduce((sum, item) => sum + (item.price ?? 0), 0),
+    [pending],
+  )
 
   const handleToggle = useCallback((itemId: string) => onToggleItem(itemId), [onToggleItem])
   const handleDelete = useCallback((itemId: string) => onDeleteItem(itemId), [onDeleteItem])
   const handleSave = useCallback(
-    (itemId: string, itemName: string, itemQuantity?: string) => onUpdateItem(itemId, itemName, itemQuantity),
+    (itemId: string, itemName: string, itemQuantity?: string, itemCategory?: string, itemPrice?: number) =>
+      onUpdateItem(itemId, itemName, itemQuantity, itemCategory, itemPrice),
     [onUpdateItem],
   )
 
@@ -118,6 +164,7 @@ export function ListDetail({
             {list.items.length === 0
               ? 'Sin ítems todavía'
               : `${done.length} de ${list.items.length} comprados`}
+            {pendingTotal > 0 && ` · ${formatPrice(pendingTotal)} pendiente`}
           </p>
         </div>
         <button className={styles.iconButton} aria-label="Compartir lista" onClick={handleShare}>
@@ -145,6 +192,7 @@ export function ListDetail({
           placeholder="Ítem (ej: Leche)"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          list="item-suggestions"
         />
         <input
           className={styles.inputQty}
@@ -157,26 +205,55 @@ export function ListDetail({
           +
         </button>
       </form>
+      <datalist id="item-suggestions">
+        {itemSuggestions.map((suggestion) => (
+          <option key={suggestion} value={suggestion} />
+        ))}
+      </datalist>
+
+      {list.items.length > 3 && (
+        <input
+          className={styles.searchInput}
+          type="search"
+          placeholder="Buscar ítem…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Buscar ítem"
+        />
+      )}
 
       {list.items.length === 0 ? (
         <div className={styles.empty}>
           <p>Agrega tu primer ítem arriba.</p>
         </div>
+      ) : filteredItems.length === 0 ? (
+        <div className={styles.empty}>
+          <p>Ningún ítem coincide con "{query}".</p>
+        </div>
       ) : (
         <div className={styles.groups}>
-          {pending.length > 0 && (
-            <ul className={styles.itemList}>
-              {pending.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  onToggle={handleToggle}
-                  onDelete={handleDelete}
-                  onSave={handleSave}
-                />
-              ))}
-            </ul>
-          )}
+          {pendingGroups.map((group) => (
+            <div key={group.category} className={styles.categoryGroup}>
+              {pendingGroups.length > 1 && <p className={styles.categoryLabel}>{group.category}</p>}
+              <ul className={styles.itemList}>
+                {group.items.map((item, index) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    onToggle={handleToggle}
+                    onDelete={handleDelete}
+                    onSave={handleSave}
+                    onMoveUp={index > 0 ? () => onMoveItem(item.id, group.items[index - 1].id) : undefined}
+                    onMoveDown={
+                      index < group.items.length - 1
+                        ? () => onMoveItem(item.id, group.items[index + 1].id)
+                        : undefined
+                    }
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
           {done.length > 0 && (
             <div className={styles.doneSection}>
               <div className={styles.doneHeader}>
@@ -192,13 +269,7 @@ export function ListDetail({
               </div>
               <ul className={styles.itemList}>
                 {done.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    onToggle={handleToggle}
-                    onDelete={handleDelete}
-                    onSave={handleSave}
-                  />
+                  <ItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} onSave={handleSave} />
                 ))}
               </ul>
             </div>
@@ -213,17 +284,23 @@ interface ItemRowProps {
   item: Item
   onToggle: (itemId: string) => void
   onDelete: (itemId: string) => void
-  onSave: (itemId: string, name: string, quantity?: string) => void
+  onSave: (itemId: string, name: string, quantity?: string, category?: string, price?: number) => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
 }
 
-const ItemRow = memo(function ItemRow({ item, onToggle, onDelete, onSave }: ItemRowProps) {
+const ItemRow = memo(function ItemRow({ item, onToggle, onDelete, onSave, onMoveUp, onMoveDown }: ItemRowProps) {
   const [editing, setEditing] = useState(false)
   const [nameDraft, setNameDraft] = useState(item.name)
   const [quantityDraft, setQuantityDraft] = useState(item.quantity ?? '')
+  const [categoryDraft, setCategoryDraft] = useState(item.category ?? '')
+  const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
 
   function startEditing() {
     setNameDraft(item.name)
     setQuantityDraft(item.quantity ?? '')
+    setCategoryDraft(item.category ?? '')
+    setPriceDraft(item.price != null ? String(item.price) : '')
     setEditing(true)
   }
 
@@ -231,7 +308,8 @@ const ItemRow = memo(function ItemRow({ item, onToggle, onDelete, onSave }: Item
     e.preventDefault()
     const trimmed = nameDraft.trim()
     if (!trimmed) return
-    onSave(item.id, trimmed, quantityDraft)
+    const parsedPrice = priceDraft.trim() ? Number(priceDraft) : undefined
+    onSave(item.id, trimmed, quantityDraft, categoryDraft, Number.isFinite(parsedPrice) ? parsedPrice : undefined)
     setEditing(false)
   }
 
@@ -239,24 +317,52 @@ const ItemRow = memo(function ItemRow({ item, onToggle, onDelete, onSave }: Item
     return (
       <li className={styles.item}>
         <form className={styles.editForm} onSubmit={handleSubmit}>
-          <input
-            className={styles.editInputName}
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            autoFocus
-          />
-          <input
-            className={styles.editInputQty}
-            value={quantityDraft}
-            onChange={(e) => setQuantityDraft(e.target.value)}
-            placeholder="Cant."
-          />
-          <button className={styles.editSaveButton} type="submit" disabled={!nameDraft.trim()}>
-            ✓
-          </button>
-          <button className={styles.editCancelButton} type="button" onClick={() => setEditing(false)}>
-            ✕
-          </button>
+          <div className={styles.editRow}>
+            <input
+              className={styles.editInputName}
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              list="item-suggestions"
+              autoFocus
+            />
+            <input
+              className={styles.editInputQty}
+              value={quantityDraft}
+              onChange={(e) => setQuantityDraft(e.target.value)}
+              placeholder="Cant."
+            />
+          </div>
+          <div className={styles.editRow}>
+            <select
+              className={styles.editSelectCategory}
+              value={categoryDraft}
+              onChange={(e) => setCategoryDraft(e.target.value)}
+            >
+              <option value="">Sin categoría</option>
+              {CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <input
+              className={styles.editInputPrice}
+              type="number"
+              step="0.01"
+              min="0"
+              value={priceDraft}
+              onChange={(e) => setPriceDraft(e.target.value)}
+              placeholder="Precio"
+            />
+          </div>
+          <div className={styles.editActions}>
+            <button className={styles.editCancelButton} type="button" onClick={() => setEditing(false)}>
+              Cancelar
+            </button>
+            <button className={styles.editSaveButton} type="submit" disabled={!nameDraft.trim()}>
+              Guardar
+            </button>
+          </div>
         </form>
       </li>
     )
@@ -273,8 +379,31 @@ const ItemRow = memo(function ItemRow({ item, onToggle, onDelete, onSave }: Item
       </button>
       <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
         <span className={styles.itemName}>{item.name}</span>
-        {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}
+        <span className={styles.itemMeta}>
+          {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}
+          {item.price != null && <span className={styles.itemPrice}>{formatPrice(item.price)}</span>}
+        </span>
       </button>
+      {(onMoveUp || onMoveDown) && (
+        <div className={styles.moveButtons}>
+          <button
+            className={styles.moveButton}
+            onClick={onMoveUp}
+            disabled={!onMoveUp}
+            aria-label={`Subir ${item.name}`}
+          >
+            ▲
+          </button>
+          <button
+            className={styles.moveButton}
+            onClick={onMoveDown}
+            disabled={!onMoveDown}
+            aria-label={`Bajar ${item.name}`}
+          >
+            ▼
+          </button>
+        </div>
+      )}
       <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
         ✎
       </button>

@@ -14,6 +14,9 @@ create table public.items (
   list_id uuid not null references public.lists (id) on delete cascade,
   name text not null,
   quantity text,
+  category text,
+  price numeric(10, 2),
+  position bigint not null default 0,
   done boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -49,3 +52,18 @@ create policy "Users can manage items in their own lists"
 
 alter publication supabase_realtime add table public.lists;
 alter publication supabase_realtime add table public.items;
+
+-- Migración: si ya corriste este script antes de que existieran las columnas
+-- category/price/position, corré solo este bloque (podés pegarlo solo, es
+-- idempotente).
+alter table public.items add column if not exists category text;
+alter table public.items add column if not exists price numeric(10, 2);
+alter table public.items add column if not exists position bigint not null default 0;
+
+update public.items
+set position = sub.rn
+from (
+  select id, row_number() over (partition by list_id order by created_at) as rn
+  from public.items
+) sub
+where public.items.id = sub.id and public.items.position = 0;

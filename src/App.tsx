@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
 import { useShoppingLists } from './hooks/useShoppingLists'
+import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
 import { Home } from './components/Home'
 import { ListDetail } from './components/ListDetail'
 import { Auth } from './components/Auth'
@@ -19,6 +20,11 @@ function App() {
   const [selectedListId, setSelectedListId] = useState<string | null>(null)
   const [toast, setToast] = useState<{ id: number; message: string; onUndo: () => void } | null>(null)
   const toastTimeoutRef = useRef<number | undefined>(undefined)
+  const [theme, setTheme] = useState<Theme>(() => getInitialTheme())
+
+  useEffect(() => {
+    applyTheme(theme)
+  }, [theme])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -38,9 +44,11 @@ function App() {
     lists,
     loading,
     createList,
+    duplicateList,
     deleteList,
     addItem,
     updateItem,
+    swapItemPositions,
     toggleItem,
     deleteItem,
     updateListName,
@@ -48,6 +56,11 @@ function App() {
     restoreItem,
     restoreList,
   } = useShoppingLists(session)
+
+  const itemSuggestions = useMemo(
+    () => Array.from(new Set(lists.flatMap((list) => list.items.map((item) => item.name)))).sort(),
+    [lists],
+  )
 
   function showUndoToast(message: string, onUndo: () => void) {
     window.clearTimeout(toastTimeoutRef.current)
@@ -94,14 +107,18 @@ function App() {
       {selectedList ? (
         <ListDetail
           list={selectedList}
+          itemSuggestions={itemSuggestions}
           onBack={() => setSelectedListId(null)}
           onAddItem={(name, quantity) => addItem(selectedList.id, name, quantity)}
-          onUpdateItem={(itemId, name, quantity) => updateItem(selectedList.id, itemId, name, quantity)}
+          onUpdateItem={(itemId, name, quantity, category, price) =>
+            updateItem(selectedList.id, itemId, name, quantity, category, price)
+          }
           onToggleItem={(itemId) => toggleItem(selectedList.id, itemId)}
           onDeleteItem={(itemId) => {
             const item = selectedList.items.find((i) => i.id === itemId)
             if (item) handleDeleteItem(selectedList, item)
           }}
+          onMoveItem={(itemId, neighborId) => swapItemPositions(selectedList.id, itemId, neighborId)}
           onClearCompleted={() => clearCompleted(selectedList.id)}
           onUpdateListName={(name) => updateListName(selectedList.id, name)}
           onDeleteList={() => handleDeleteList(selectedList)}
@@ -110,8 +127,11 @@ function App() {
         <Home
           lists={lists}
           loading={loading}
+          theme={theme}
+          onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
           onCreateList={(name) => setSelectedListId(createList(name))}
           onSelectList={setSelectedListId}
+          onDuplicateList={duplicateList}
           onDeleteList={(id) => {
             const list = lists.find((l) => l.id === id)
             if (list) handleDeleteList(list)
