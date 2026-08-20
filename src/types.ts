@@ -4,6 +4,7 @@ export interface Item {
   quantity?: string
   price?: number
   categoryId?: string
+  imageUrl?: string
   done: boolean
   position: number
   createdAt: number

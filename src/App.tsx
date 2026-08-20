@@ -4,6 +4,7 @@ import { supabase } from './lib/supabaseClient'
 import { useShoppingLists } from './hooks/useShoppingLists'
 import { useCategories } from './hooks/useCategories'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
+import { uploadItemImage } from './lib/imageUpload'
 import { Home } from './components/Home'
 import { Categories } from './components/Categories'
 import { ListDetail } from './components/ListDetail'
@@ -54,6 +55,7 @@ function App() {
     updateItem,
     swapItemPositions,
     toggleItem,
+    setItemImage,
     deleteItem,
     updateListName,
     clearCompleted,
@@ -95,6 +97,16 @@ function App() {
     })
   }
 
+  async function handleUploadItemImage(listId: string, itemId: string, file: File) {
+    if (!session) return
+    try {
+      const url = await uploadItemImage(session.user.id, itemId, file)
+      setItemImage(listId, itemId, url)
+    } catch (err) {
+      console.error('Error al subir la foto del ítem:', err)
+    }
+  }
+
   if (sessionLoading) {
     return <div className={styles.loadingScreen}>Cargando…</div>
   }
@@ -126,6 +138,8 @@ function App() {
             if (item) handleDeleteItem(selectedList, item)
           }}
           onMoveItem={(itemId, neighborId) => swapItemPositions(selectedList.id, itemId, neighborId)}
+          onUploadItemImage={(itemId, file) => handleUploadItemImage(selectedList.id, itemId, file)}
+          onRemoveItemImage={(itemId) => setItemImage(selectedList.id, itemId, undefined)}
           onClearCompleted={() => clearCompleted(selectedList.id)}
           onUpdateListName={(name) => updateListName(selectedList.id, name)}
           onDeleteList={() => handleDeleteList(selectedList)}

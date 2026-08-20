@@ -25,6 +25,7 @@ create table public.items (
   name text not null,
   quantity text,
   price numeric(10, 2),
+  image_url text,
   position bigint not null default 0,
   done boolean not null default false,
   created_at timestamptz not null default now()
@@ -72,6 +73,25 @@ create policy "Users can manage their own categories"
 alter publication supabase_realtime add table public.lists;
 alter publication supabase_realtime add table public.items;
 alter publication supabase_realtime add table public.categories;
+
+-- Bucket de Storage para las fotos de los ítems. Público de solo lectura:
+-- cualquiera con la URL puede ver la imagen, pero solo el dueño puede
+-- subir/reemplazar/borrar sus propias fotos (carpeta = su user_id).
+insert into storage.buckets (id, name, public)
+values ('item-images', 'item-images', true)
+on conflict (id) do nothing;
+
+create policy "Users can upload their own item images"
+  on storage.objects for insert
+  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Users can update their own item images"
+  on storage.objects for update
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Users can delete their own item images"
+  on storage.objects for delete
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- Migración: si ya corriste este script antes de que existieran las columnas
 -- category/price/position, corré solo este bloque (podés pegarlo solo, es
@@ -141,3 +161,26 @@ where public.items.category = categories.name
   and public.lists.user_id = categories.user_id;
 
 alter table public.items drop column if exists category;
+
+-- Migración: foto por ítem. Corré este bloque si ya tenías el schema sin
+-- la columna items.image_url ni el bucket de Storage — es idempotente.
+alter table public.items add column if not exists image_url text;
+
+insert into storage.buckets (id, name, public)
+values ('item-images', 'item-images', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Users can upload their own item images" on storage.objects;
+create policy "Users can upload their own item images"
+  on storage.objects for insert
+  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can update their own item images" on storage.objects;
+create policy "Users can update their own item images"
+  on storage.objects for update
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can delete their own item images" on storage.objects;
+create policy "Users can delete their own item images"
+  on storage.objects for delete
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);

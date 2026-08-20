@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { memo, useCallback, useMemo, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
 import { Icon } from './Icon'
@@ -13,6 +13,8 @@ interface ListDetailProps {
   onToggleItem: (itemId: string) => void
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, neighborId: string) => void
+  onUploadItemImage: (itemId: string, file: File) => Promise<void>
+  onRemoveItemImage: (itemId: string) => void
   onClearCompleted: () => void
   onUpdateListName: (name: string) => void
   onDeleteList: () => void
@@ -61,6 +63,8 @@ export function ListDetail({
   onToggleItem,
   onDeleteItem,
   onMoveItem,
+  onUploadItemImage,
+  onRemoveItemImage,
   onClearCompleted,
   onUpdateListName,
   onDeleteList,
@@ -257,6 +261,8 @@ export function ListDetail({
                     onToggle={handleToggle}
                     onDelete={handleDelete}
                     onSave={handleSave}
+                    onUploadImage={onUploadItemImage}
+                    onRemoveImage={onRemoveItemImage}
                     onMoveUp={index > 0 ? () => onMoveItem(item.id, group.items[index - 1].id) : undefined}
                     onMoveDown={
                       index < group.items.length - 1
@@ -290,6 +296,8 @@ export function ListDetail({
                     onToggle={handleToggle}
                     onDelete={handleDelete}
                     onSave={handleSave}
+                    onUploadImage={onUploadItemImage}
+                    onRemoveImage={onRemoveItemImage}
                   />
                 ))}
               </ul>
@@ -307,6 +315,8 @@ interface ItemRowProps {
   onToggle: (itemId: string) => void
   onDelete: (itemId: string) => void
   onSave: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
+  onUploadImage: (itemId: string, file: File) => Promise<void>
+  onRemoveImage: (itemId: string) => void
   onMoveUp?: () => void
   onMoveDown?: () => void
 }
@@ -317,6 +327,8 @@ const ItemRow = memo(function ItemRow({
   onToggle,
   onDelete,
   onSave,
+  onUploadImage,
+  onRemoveImage,
   onMoveUp,
   onMoveDown,
 }: ItemRowProps) {
@@ -325,6 +337,7 @@ const ItemRow = memo(function ItemRow({
   const [quantityDraft, setQuantityDraft] = useState(item.quantity ?? '')
   const [categoryIdDraft, setCategoryIdDraft] = useState(item.categoryId ?? '')
   const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const category = item.categoryId ? categories.find((c) => c.id === item.categoryId) : undefined
 
@@ -351,10 +364,46 @@ const ItemRow = memo(function ItemRow({
     setEditing(false)
   }
 
+  async function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingImage(true)
+    try {
+      await onUploadImage(item.id, file)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   if (editing) {
     return (
       <li className={styles.item}>
         <form className={styles.editForm} onSubmit={handleSubmit}>
+          <div className={styles.editImageRow}>
+            <span className={styles.editImagePreview}>
+              {item.imageUrl ? (
+                <img src={item.imageUrl} alt="" className={styles.editImagePreviewImg} />
+              ) : (
+                <Icon name="cart" size={20} />
+              )}
+            </span>
+            <label className={styles.editImageButton}>
+              {uploadingImage ? 'Subiendo…' : item.imageUrl ? 'Cambiar foto' : 'Agregar foto'}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                disabled={uploadingImage}
+                hidden
+              />
+            </label>
+            {item.imageUrl && !uploadingImage && (
+              <button type="button" className={styles.editImageRemove} onClick={() => onRemoveImage(item.id)}>
+                Quitar
+              </button>
+            )}
+          </div>
           <div className={styles.editRow}>
             <input
               className={styles.editInputName}
@@ -415,7 +464,15 @@ const ItemRow = memo(function ItemRow({
         {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
       </button>
       <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
-        {category && <span className={styles.itemCategoryIcon}>{category.icon}</span>}
+        {(item.imageUrl || category) && (
+          <span className={styles.itemThumb}>
+            {item.imageUrl ? (
+              <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
+            ) : (
+              category?.icon
+            )}
+          </span>
+        )}
         <span className={styles.itemName}>{item.name}</span>
         <span className={styles.itemMeta}>
           {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}

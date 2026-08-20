@@ -12,6 +12,7 @@ interface DbItem {
   quantity: string | null
   category_id: string | null
   price: number | null
+  image_url: string | null
   position: number
   done: boolean
   created_at: string
@@ -34,6 +35,7 @@ function mapItem(row: DbItem): Item {
     quantity: row.quantity ?? undefined,
     categoryId: row.category_id ?? undefined,
     price: row.price ?? undefined,
+    imageUrl: row.image_url ?? undefined,
     done: row.done,
     position: row.position,
     createdAt: new Date(row.created_at).getTime(),
@@ -60,7 +62,7 @@ export function useShoppingLists(session: Session | null) {
     const { data, error } = await supabase
       .from('lists')
       .select(
-        'id, name, created_at, items(id, list_id, name, quantity, category_id, price, position, done, created_at)',
+        'id, name, created_at, items(id, list_id, name, quantity, category_id, price, image_url, position, done, created_at)',
       )
       .order('created_at', { ascending: false })
       .limit(LISTS_LIMIT)
@@ -188,6 +190,7 @@ export function useShoppingLists(session: Session | null) {
             quantity: item.quantity ?? null,
             category_id: item.categoryId ?? null,
             price: item.price ?? null,
+            image_url: item.imageUrl ?? null,
             position: item.position,
             done: false,
           })),
@@ -356,6 +359,7 @@ export function useShoppingLists(session: Session | null) {
         quantity: item.quantity ?? null,
         category_id: item.categoryId ?? null,
         price: item.price ?? null,
+        image_url: item.imageUrl ?? null,
         position: item.position,
         done: item.done,
         created_at: new Date(item.createdAt).toISOString(),
@@ -386,6 +390,7 @@ export function useShoppingLists(session: Session | null) {
             quantity: item.quantity ?? null,
             category_id: item.categoryId ?? null,
             price: item.price ?? null,
+            image_url: item.imageUrl ?? null,
             position: item.position,
             done: item.done,
             created_at: new Date(item.createdAt).toISOString(),
@@ -418,6 +423,24 @@ export function useShoppingLists(session: Session | null) {
       })
   }
 
+  function setItemImage(listId: string, itemId: string, imageUrl: string | undefined) {
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === listId
+          ? { ...list, items: list.items.map((item) => (item.id === itemId ? { ...item, imageUrl } : item)) }
+          : list,
+      ),
+    )
+
+    supabase
+      .from('items')
+      .update({ image_url: imageUrl ?? null })
+      .eq('id', itemId)
+      .then(({ error }) => {
+        if (error) console.error('Error al guardar la foto del ítem:', error.message)
+      })
+  }
+
   function deleteItem(listId: string, itemId: string) {
     setLists((prev) =>
       prev.map((list) =>
@@ -444,6 +467,7 @@ export function useShoppingLists(session: Session | null) {
     updateItem,
     swapItemPositions,
     toggleItem,
+    setItemImage,
     deleteItem,
     updateListName,
     clearCompleted,
