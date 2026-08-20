@@ -370,14 +370,14 @@
 }
 
 .editInputName,
-.editSelectCategory {
+.editInputCategory {
   flex: 1;
   min-width: 0;
 }
 
 .editInputName,
 .editInputQty,
-.editSelectCategory,
+.editInputCategory,
 .editInputPrice {
   padding: 10px 12px;
   border-radius: var(--radius-sm);
@@ -395,7 +395,7 @@
 
 .editInputName:focus,
 .editInputQty:focus,
-.editSelectCategory:focus,
+.editInputCategory:focus,
 .editInputPrice:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
