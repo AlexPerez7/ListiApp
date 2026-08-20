@@ -49,7 +49,11 @@ export async function uploadItemImage(userId: string, itemId: string, file: File
     .from('item-images')
     .upload(path, blob, { contentType: 'image/jpeg', upsert: true })
 
-  if (error) throw error
+  if (error) {
+    console.error('uploadItemImage error', { path, error })
+    const detail = 'statusCode' in error ? ` [${(error as { statusCode?: string }).statusCode}]` : ''
+    throw new Error(`${error.message}${detail} (path: ${path})`)
+  }
 
   const { data } = supabase.storage.from('item-images').getPublicUrl(path)
   return `${data.publicUrl}?v=${Date.now()}`
