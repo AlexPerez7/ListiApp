@@ -16,6 +16,7 @@ interface DbItem {
   category_id: string | null
   price: number | null
   image_url: string | null
+  icon_key: string | null
   position: number
   done: boolean
   created_at: string
@@ -40,6 +41,7 @@ function mapItem(row: DbItem): Item {
     categoryId: row.category_id ?? undefined,
     price: row.price ?? undefined,
     imageUrl: row.image_url ?? undefined,
+    iconKey: row.icon_key ?? undefined,
     done: row.done,
     position: row.position,
     createdAt: new Date(row.created_at).getTime(),
@@ -67,7 +69,7 @@ export function useShoppingLists(session: Session | null) {
     const { data, error } = await supabase
       .from('lists')
       .select(
-        'id, name, created_at, is_template, items(id, list_id, name, quantity, category_id, price, image_url, position, done, created_at)',
+        'id, name, created_at, is_template, items(id, list_id, name, quantity, category_id, price, image_url, icon_key, position, done, created_at)',
       )
       .order('created_at', { ascending: false })
       .limit(LISTS_LIMIT)
@@ -221,6 +223,7 @@ export function useShoppingLists(session: Session | null) {
             category_id: item.categoryId ?? null,
             price: item.price ?? null,
             image_url: item.imageUrl ?? null,
+            icon_key: item.iconKey ?? null,
             position: item.position,
             done: false,
           })),
@@ -250,6 +253,7 @@ export function useShoppingLists(session: Session | null) {
           : null,
         price: itemData.price ?? null,
         image_url: itemData.imageUrl ?? null,
+        icon_key: itemData.iconKey ?? null,
         position: index,
         done: itemData.done,
       }))
@@ -484,6 +488,7 @@ export function useShoppingLists(session: Session | null) {
         category_id: item.categoryId ?? null,
         price: item.price ?? null,
         image_url: item.imageUrl ?? null,
+            icon_key: item.iconKey ?? null,
         position: item.position,
         done: item.done,
         created_at: new Date(item.createdAt).toISOString(),
@@ -520,6 +525,7 @@ export function useShoppingLists(session: Session | null) {
             category_id: item.categoryId ?? null,
             price: item.price ?? null,
             image_url: item.imageUrl ?? null,
+            icon_key: item.iconKey ?? null,
             position: item.position,
             done: item.done,
             created_at: new Date(item.createdAt).toISOString(),
@@ -579,6 +585,41 @@ export function useShoppingLists(session: Session | null) {
       })
   }
 
+  // Elige a mano uno de los íconos del catálogo para el ítem, en reemplazo
+  // de la foto propia (si tenía una, se borra de Storage igual que
+  // setItemImage) o de la detección automática por nombre.
+  function setItemIcon(listId: string, itemId: string, iconKey: string | undefined) {
+    const previousImageUrl = lists.find((list) => list.id === listId)?.items.find((item) => item.id === itemId)
+      ?.imageUrl
+
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === listId
+          ? {
+              ...list,
+              items: list.items.map((item) =>
+                item.id === itemId ? { ...item, iconKey, imageUrl: undefined } : item,
+              ),
+            }
+          : list,
+      ),
+    )
+
+    supabase
+      .from('items')
+      .update({ icon_key: iconKey ?? null, image_url: null })
+      .eq('id', itemId)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error al guardar el ícono del ítem:', error.message)
+          return
+        }
+        if (previousImageUrl && session?.user.id) {
+          deleteItemImage(session.user.id, itemId, previousImageUrl)
+        }
+      })
+  }
+
   function deleteItem(listId: string, itemId: string) {
     setLists((prev) =>
       prev.map((list) =>
@@ -609,6 +650,7 @@ export function useShoppingLists(session: Session | null) {
     reorderItems,
     toggleItem,
     setItemImage,
+    setItemIcon,
     deleteItem,
     updateListName,
     clearCompleted,

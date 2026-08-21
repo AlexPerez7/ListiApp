@@ -5,6 +5,7 @@ export interface Item {
   price?: number
   categoryId?: string
   imageUrl?: string
+  iconKey?: string
   done: boolean
   position: number
   createdAt: number

@@ -6,6 +6,7 @@ export interface BackupItem {
   price?: number
   categoryName?: string
   imageUrl?: string
+  iconKey?: string
   done: boolean
 }
 
@@ -36,6 +37,7 @@ export function buildBackup(lists: ShoppingList[], categories: Category[]): Back
           price: item.price,
           categoryName: item.categoryId ? categoriesById.get(item.categoryId)?.name : undefined,
           imageUrl: item.imageUrl,
+          iconKey: item.iconKey,
           done: item.done,
         })),
     })),
