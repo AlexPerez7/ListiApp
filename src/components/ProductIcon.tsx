@@ -423,6 +423,13 @@ const ICONS: Record<string, ReactElement> = {
   shampoo: (
     <path d="M9.5 5h5v2.5c1 .4 1.5 1.2 1.5 2.3V19c0 .8-.7 1.5-1.5 1.5h-5c-.8 0-1.5-.7-1.5-1.5V9.8c0-1.1.5-1.9 1.5-2.3Z" fill="#a875c9" />
   ),
+  deodorant: (
+    <>
+      <rect x="8.5" y="9" width="7" height="10.5" rx="2.5" fill="#5fb3e0" />
+      <rect x="9.3" y="6" width="5.4" height="3.6" rx="1" fill="#3f8cbf" />
+      <rect x="9.8" y="4.5" width="4.4" height="1.8" rx="0.7" fill="#2c6f9e" />
+    </>
+  ),
   paper: (
     <>
       <rect x="7" y="6" width="10" height="12" rx="5" fill="#f5f5f0" stroke="#dcdcd2" strokeWidth="0.7" />

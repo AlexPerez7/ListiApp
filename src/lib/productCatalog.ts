@@ -118,6 +118,8 @@ const CATALOG: Record<string, string> = {
   shampoo: 'shampoo',
   champu: 'shampoo',
   champú: 'shampoo',
+  desodorante: 'deodorant',
+  desodorantes: 'deodorant',
   papel: 'paper',
   'papel higienico': 'paper',
   'papel higiénico': 'paper',

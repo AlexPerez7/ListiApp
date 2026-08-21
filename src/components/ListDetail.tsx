@@ -521,28 +521,82 @@ const ItemRow = memo(function ItemRow({
     }
   }
 
+  const thumbButton = (
+    <button
+      type="button"
+      className={`${styles.itemThumb} ${uploadingImage ? styles.itemThumbUploading : ''}`}
+      onClick={() => setPhotoSheetOpen(true)}
+      disabled={uploadingImage}
+      aria-label={`Cambiar imagen de ${item.name}`}
+    >
+      {item.imageUrl ? (
+        <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
+      ) : displayIcon ? (
+        <ProductIcon iconKey={displayIcon} size={20} />
+      ) : (
+        <Icon name="cart" size={18} />
+      )}
+    </button>
+  )
+
+  const photoInputAndSheet = (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+        disabled={uploadingImage}
+        hidden
+      />
+      {photoSheetOpen && (
+        <div className={styles.sheetOverlay} onClick={() => setPhotoSheetOpen(false)}>
+          <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.sheetHandle} />
+            <h2 className={styles.sheetTitle}>Imagen de {item.name}</h2>
+            <button type="button" className={styles.sheetUploadButton} onClick={openFilePicker}>
+              <Icon name="upload" size={16} />
+              Subir una foto
+            </button>
+            {item.imageUrl && (
+              <button
+                type="button"
+                className={styles.sheetRemovePhotoButton}
+                onClick={() => {
+                  onRemoveImage(item.id)
+                  setPhotoSheetOpen(false)
+                }}
+              >
+                Quitar foto
+              </button>
+            )}
+            <p className={styles.sheetIconLabel}>O elige un ícono</p>
+            <div className={styles.iconGrid}>
+              {PRODUCT_ICON_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`${styles.iconGridOption} ${key === item.iconKey ? styles.iconGridOptionSelected : ''}`}
+                  onClick={() => chooseIcon(key)}
+                  aria-label={key}
+                >
+                  <ProductIcon iconKey={key} size={22} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
   if (editing) {
     return (
       <li ref={setNodeRef} style={dragStyle} className={styles.item}>
         <form className={styles.editForm} onSubmit={handleSubmit}>
           <div className={styles.editImageRow}>
-            <span className={styles.editImagePreview}>
-              {item.imageUrl ? (
-                <img src={item.imageUrl} alt="" className={styles.editImagePreviewImg} />
-              ) : (
-                <Icon name="cart" size={20} />
-              )}
-            </span>
-            <label className={styles.editImageButton}>
-              {uploadingImage ? 'Subiendo…' : item.imageUrl ? 'Cambiar foto' : 'Agregar foto'}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                disabled={uploadingImage}
-                hidden
-              />
-            </label>
+            {thumbButton}
+            <span className={styles.editImageHint}>Toca la imagen para cambiarla</span>
             {item.imageUrl && !uploadingImage && (
               <button type="button" className={styles.editImageRemove} onClick={() => onRemoveImage(item.id)}>
                 Quitar
@@ -596,6 +650,7 @@ const ItemRow = memo(function ItemRow({
             </button>
           </div>
         </form>
+        {photoInputAndSheet}
       </li>
     )
   }
@@ -627,21 +682,7 @@ const ItemRow = memo(function ItemRow({
             <Icon name="grip" size={16} />
           </button>
         )}
-        {(item.imageUrl || displayIcon) && (
-          <button
-            type="button"
-            className={`${styles.itemThumb} ${uploadingImage ? styles.itemThumbUploading : ''}`}
-            onClick={() => setPhotoSheetOpen(true)}
-            disabled={uploadingImage}
-            aria-label={`Cambiar imagen de ${item.name}`}
-          >
-            {item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
-            ) : (
-              <ProductIcon iconKey={displayIcon!} size={20} />
-            )}
-          </button>
-        )}
+        {thumbButton}
         <div className={styles.itemMain}>
           <span className={styles.itemName}>{item.name}</span>
           <span className={styles.itemMeta}>
@@ -661,52 +702,7 @@ const ItemRow = memo(function ItemRow({
         </button>
       </div>
       {imageError && <p className={styles.itemImageError}>{imageError}</p>}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleImageChange}
-        disabled={uploadingImage}
-        hidden
-      />
-      {photoSheetOpen && (
-        <div className={styles.sheetOverlay} onClick={() => setPhotoSheetOpen(false)}>
-          <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.sheetHandle} />
-            <h2 className={styles.sheetTitle}>Imagen de {item.name}</h2>
-            <button type="button" className={styles.sheetUploadButton} onClick={openFilePicker}>
-              <Icon name="upload" size={16} />
-              Subir una foto
-            </button>
-            {item.imageUrl && (
-              <button
-                type="button"
-                className={styles.sheetRemovePhotoButton}
-                onClick={() => {
-                  onRemoveImage(item.id)
-                  setPhotoSheetOpen(false)
-                }}
-              >
-                Quitar foto
-              </button>
-            )}
-            <p className={styles.sheetIconLabel}>O elige un ícono</p>
-            <div className={styles.iconGrid}>
-              {PRODUCT_ICON_KEYS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`${styles.iconGridOption} ${key === item.iconKey ? styles.iconGridOptionSelected : ''}`}
-                  onClick={() => chooseIcon(key)}
-                  aria-label={key}
-                >
-                  <ProductIcon iconKey={key} size={22} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {photoInputAndSheet}
     </li>
   )
 })
