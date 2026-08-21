@@ -15,6 +15,7 @@ export interface ShoppingList {
   name: string
   items: Item[]
   createdAt: number
+  isTemplate: boolean
 }
 
 export interface Category {

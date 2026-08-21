@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { deleteItemImage } from '../lib/imageUpload'
-import type { Item, ShoppingList } from '../types'
+import type { BackupPayload } from '../lib/backup'
+import type { Category, Item, ShoppingList } from '../types'
 
 const LISTS_LIMIT = 200
 
@@ -23,6 +24,7 @@ interface DbListRow {
   id: string
   name: string
   created_at: string
+  is_template: boolean
 }
 
 interface DbList extends DbListRow {
@@ -48,6 +50,7 @@ function mapList(row: DbList): ShoppingList {
     id: row.id,
     name: row.name,
     createdAt: new Date(row.created_at).getTime(),
+    isTemplate: row.is_template,
     items: row.items
       .slice()
       .sort((a, b) => a.position - b.position)
@@ -63,7 +66,7 @@ export function useShoppingLists(session: Session | null) {
     const { data, error } = await supabase
       .from('lists')
       .select(
-        'id, name, created_at, items(id, list_id, name, quantity, category_id, price, image_url, position, done, created_at)',
+        'id, name, created_at, is_template, items(id, list_id, name, quantity, category_id, price, image_url, position, done, created_at)',
       )
       .order('created_at', { ascending: false })
       .limit(LISTS_LIMIT)
@@ -102,10 +105,24 @@ export function useShoppingLists(session: Session | null) {
             const next = existing
               ? prev.map((list) =>
                   list.id === row.id
-                    ? { ...list, name: row.name, createdAt: new Date(row.created_at).getTime() }
+                    ? {
+                        ...list,
+                        name: row.name,
+                        createdAt: new Date(row.created_at).getTime(),
+                        isTemplate: row.is_template,
+                      }
                     : list,
                 )
-              : [{ id: row.id, name: row.name, createdAt: new Date(row.created_at).getTime(), items: [] }, ...prev]
+              : [
+                  {
+                    id: row.id,
+                    name: row.name,
+                    createdAt: new Date(row.created_at).getTime(),
+                    isTemplate: row.is_template,
+                    items: [],
+                  },
+                  ...prev,
+                ]
 
             return next.slice().sort((a, b) => b.createdAt - a.createdAt)
           })
@@ -146,7 +163,7 @@ export function useShoppingLists(session: Session | null) {
 
   function createList(name: string): string {
     const id = crypto.randomUUID()
-    const newList: ShoppingList = { id, name, items: [], createdAt: Date.now() }
+    const newList: ShoppingList = { id, name, items: [], createdAt: Date.now(), isTemplate: false }
     setLists((prev) => [newList, ...prev])
 
     supabase
@@ -163,11 +180,22 @@ export function useShoppingLists(session: Session | null) {
     const original = lists.find((l) => l.id === listId)
     if (!original) return
 
+    return duplicateListAs(original, `${original.name} (copia)`, false)
+  }
+
+  function createListFromTemplate(listId: string): string | undefined {
+    const original = lists.find((l) => l.id === listId)
+    if (!original) return
+    return duplicateListAs(original, original.name, false)
+  }
+
+  function duplicateListAs(original: ShoppingList, name: string, isTemplate: boolean): string {
     const newListId = crypto.randomUUID()
     const newList: ShoppingList = {
       id: newListId,
-      name: `${original.name} (copia)`,
+      name,
       createdAt: Date.now(),
+      isTemplate,
       items: original.items.map((item) => ({ ...item, id: crypto.randomUUID(), done: false })),
     }
 
@@ -175,7 +203,7 @@ export function useShoppingLists(session: Session | null) {
 
     supabase
       .from('lists')
-      .insert({ id: newListId, name: newList.name })
+      .insert({ id: newListId, name: newList.name, is_template: isTemplate })
       .then(async ({ error }) => {
         if (error) {
           console.error('Error al duplicar lista:', error.message)
@@ -200,6 +228,43 @@ export function useShoppingLists(session: Session | null) {
       })
 
     return newListId
+  }
+
+  // Restaura un backup exportado con buildBackup. Crea listas/items nuevos
+  // (no pisa nada existente); las categorías se asocian por nombre a las
+  // que ya tenga el usuario, y si no hay ninguna que coincida el item queda
+  // sin categoría en vez de crear una nueva.
+  async function importBackup(payload: BackupPayload, categories: Category[]) {
+    const categoryIdByName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c.id]))
+
+    for (const listData of payload.lists) {
+      const listId = crypto.randomUUID()
+      const items = listData.items.map((itemData, index) => ({
+        id: crypto.randomUUID(),
+        list_id: listId,
+        name: itemData.name,
+        quantity: itemData.quantity ?? null,
+        category_id: itemData.categoryName
+          ? (categoryIdByName.get(itemData.categoryName.trim().toLowerCase()) ?? null)
+          : null,
+        price: itemData.price ?? null,
+        image_url: itemData.imageUrl ?? null,
+        position: index,
+        done: itemData.done,
+      }))
+
+      const { error } = await supabase.from('lists').insert({ id: listId, name: listData.name })
+      if (error) {
+        console.error('Error al importar lista:', error.message)
+        continue
+      }
+      if (items.length > 0) {
+        const { error: itemsError } = await supabase.from('items').insert(items)
+        if (itemsError) console.error('Error al importar ítems:', itemsError.message)
+      }
+    }
+
+    await fetchLists()
   }
 
   function deleteList(listId: string) {
@@ -313,6 +378,50 @@ export function useShoppingLists(session: Session | null) {
     })
   }
 
+  function toggleTemplate(listId: string) {
+    const list = lists.find((l) => l.id === listId)
+    if (!list) return
+    const nextIsTemplate = !list.isTemplate
+
+    setLists((prev) => prev.map((l) => (l.id === listId ? { ...l, isTemplate: nextIsTemplate } : l)))
+
+    supabase
+      .from('lists')
+      .update({ is_template: nextIsTemplate })
+      .eq('id', listId)
+      .then(({ error }) => {
+        if (error) console.error('Error al marcar la lista como plantilla:', error.message)
+      })
+  }
+
+  // Reordena por drag & drop: recibe los ids de un mismo grupo (categoria) en
+  // su nuevo orden y les asigna posiciones secuenciales. Las posiciones son
+  // solo comparables entre items del mismo grupo (ver groupByCategory), asi
+  // que no importa que se solapen con las de otro grupo.
+  function reorderItems(listId: string, orderedItemIds: string[]) {
+    const positionById = new Map(orderedItemIds.map((id, index) => [id, index]))
+
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === listId
+          ? {
+              ...list,
+              items: list.items.map((item) =>
+                positionById.has(item.id) ? { ...item, position: positionById.get(item.id)! } : item,
+              ),
+            }
+          : list,
+      ),
+    )
+
+    Promise.all(
+      orderedItemIds.map((id, index) => supabase.from('items').update({ position: index }).eq('id', id)),
+    ).then((results) => {
+      const failed = results.find((r) => r.error)
+      if (failed?.error) console.error('Error al reordenar ítems:', failed.error.message)
+    })
+  }
+
   function updateListName(listId: string, name: string) {
     setLists((prev) => prev.map((list) => (list.id === listId ? { ...list, name } : list)))
 
@@ -375,7 +484,12 @@ export function useShoppingLists(session: Session | null) {
 
     supabase
       .from('lists')
-      .insert({ id: list.id, name: list.name, created_at: new Date(list.createdAt).toISOString() })
+      .insert({
+        id: list.id,
+        name: list.name,
+        created_at: new Date(list.createdAt).toISOString(),
+        is_template: list.isTemplate,
+      })
       .then(async ({ error }) => {
         if (error) {
           console.error('Error al restaurar lista:', error.message)
@@ -472,10 +586,13 @@ export function useShoppingLists(session: Session | null) {
     loading,
     createList,
     duplicateList,
+    createListFromTemplate,
+    toggleTemplate,
     deleteList,
     addItem,
     updateItem,
     swapItemPositions,
+    reorderItems,
     toggleItem,
     setItemImage,
     deleteItem,
@@ -483,5 +600,6 @@ export function useShoppingLists(session: Session | null) {
     clearCompleted,
     restoreItem,
     restoreList,
+    importBackup,
   }
 }

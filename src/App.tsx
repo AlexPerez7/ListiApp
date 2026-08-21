@@ -5,6 +5,7 @@ import { useShoppingLists } from './hooks/useShoppingLists'
 import { useCategories } from './hooks/useCategories'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
 import { uploadItemImage, deleteItemImage } from './lib/imageUpload'
+import { buildBackup, downloadBackup, parseBackup } from './lib/backup'
 import { Home } from './components/Home'
 import { Categories } from './components/Categories'
 import { ListDetail } from './components/ListDetail'
@@ -50,10 +51,12 @@ function App() {
     loading,
     createList,
     duplicateList,
+    createListFromTemplate,
+    toggleTemplate,
     deleteList,
     addItem,
     updateItem,
-    swapItemPositions,
+    reorderItems,
     toggleItem,
     setItemImage,
     deleteItem,
@@ -61,6 +64,7 @@ function App() {
     clearCompleted,
     restoreItem,
     restoreList,
+    importBackup,
   } = useShoppingLists(session)
 
   const {
@@ -129,6 +133,21 @@ function App() {
     }
   }
 
+  function handleExport() {
+    downloadBackup(buildBackup(lists, categories))
+  }
+
+  async function handleImport(file: File) {
+    try {
+      const raw = await file.text()
+      const payload = parseBackup(raw)
+      await importBackup(payload, categories)
+      alert(`Se importaron ${payload.lists.length} lista(s).`)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo importar el archivo.')
+    }
+  }
+
   if (sessionLoading) {
     return <div className={styles.loadingScreen}>Cargando…</div>
   }
@@ -159,7 +178,7 @@ function App() {
             const item = selectedList.items.find((i) => i.id === itemId)
             if (item) handleDeleteItem(selectedList, item)
           }}
-          onMoveItem={(itemId, neighborId) => swapItemPositions(selectedList.id, itemId, neighborId)}
+          onReorderItems={(orderedItemIds) => reorderItems(selectedList.id, orderedItemIds)}
           onUploadItemImage={(itemId, file) => handleUploadItemImage(selectedList.id, itemId, file)}
           onRemoveItemImage={(itemId) => setItemImage(selectedList.id, itemId, undefined)}
           onClearCompleted={() => clearCompleted(selectedList.id)}
@@ -187,6 +206,10 @@ function App() {
               const list = lists.find((l) => l.id === id)
               if (list) handleDeleteList(list)
             }}
+            onToggleTemplate={toggleTemplate}
+            onUseTemplate={(id) => setSelectedListId(createListFromTemplate(id) ?? null)}
+            onExport={handleExport}
+            onImport={handleImport}
             onSignOut={() => supabase.auth.signOut()}
           />
         ) : (

@@ -157,6 +157,20 @@
   gap: 12px;
 }
 
+.templatesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.templatesLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
 .card {
   display: flex;
   align-items: stretch;
@@ -198,6 +212,8 @@
   color: var(--color-text-secondary);
 }
 
+.useTemplateButton,
+.pinButton,
 .duplicateButton,
 .deleteButton {
   width: 48px;
@@ -215,7 +231,20 @@
   color: #dc2626;
 }
 
-.duplicateButton:active {
+.duplicateButton:active,
+.useTemplateButton:active {
   background: rgba(31, 41, 55, 0.05);
   color: var(--color-primary-dark);
+}
+
+.pinButton {
+  color: var(--color-text-secondary);
+}
+
+.pinButton:active {
+  background: rgba(31, 41, 55, 0.05);
+}
+
+.pinButtonActive {
+  color: var(--color-accent);
 }

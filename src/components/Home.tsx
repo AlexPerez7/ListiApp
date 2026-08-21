@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState, type FormEvent } from 'react'
+import { memo, useCallback, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { ShoppingList } from '../types'
 import type { Theme } from '../lib/theme'
 import { Icon } from './Icon'
@@ -15,6 +15,10 @@ interface HomeProps {
   onSelectList: (id: string) => void
   onDuplicateList: (id: string) => void
   onDeleteList: (id: string) => void
+  onToggleTemplate: (id: string) => void
+  onUseTemplate: (id: string) => void
+  onExport: () => void
+  onImport: (file: File) => void
   onSignOut: () => void
 }
 
@@ -27,10 +31,15 @@ export function Home({
   onSelectList,
   onDuplicateList,
   onDeleteList,
+  onToggleTemplate,
+  onUseTemplate,
+  onExport,
+  onImport,
   onSignOut,
 }: HomeProps) {
   const [name, setName] = useState('')
   const [query, setQuery] = useState('')
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -40,15 +49,26 @@ export function Home({
     setName('')
   }
 
+  function handleImportChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) onImport(file)
+  }
+
   const handleSelectList = useCallback((id: string) => onSelectList(id), [onSelectList])
   const handleDuplicateList = useCallback((id: string) => onDuplicateList(id), [onDuplicateList])
   const handleDeleteList = useCallback((id: string) => onDeleteList(id), [onDeleteList])
+  const handleToggleTemplate = useCallback((id: string) => onToggleTemplate(id), [onToggleTemplate])
+  const handleUseTemplate = useCallback((id: string) => onUseTemplate(id), [onUseTemplate])
 
   const filteredLists = useMemo(() => {
     const trimmed = query.trim().toLowerCase()
     if (!trimmed) return lists
     return lists.filter((list) => list.name.toLowerCase().includes(trimmed))
   }, [lists, query])
+
+  const templates = useMemo(() => filteredLists.filter((list) => list.isTemplate), [filteredLists])
+  const regularLists = useMemo(() => filteredLists.filter((list) => !list.isTemplate), [filteredLists])
 
   return (
     <div className={styles.page}>
@@ -61,6 +81,23 @@ export function Home({
           </div>
         </div>
         <div className={styles.headerActions}>
+          <button className={styles.themeButton} onClick={onExport} aria-label="Exportar tus datos (backup)">
+            <Icon name="download" size={17} />
+          </button>
+          <button
+            className={styles.themeButton}
+            onClick={() => importInputRef.current?.click()}
+            aria-label="Importar un backup"
+          >
+            <Icon name="upload" size={17} />
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json"
+            onChange={handleImportChange}
+            hidden
+          />
           <button
             className={styles.themeButton}
             onClick={onToggleTheme}
@@ -111,17 +148,39 @@ export function Home({
           <p>Ninguna lista coincide con "{query}".</p>
         </div>
       ) : (
-        <ul className={styles.list}>
-          {filteredLists.map((list) => (
-            <ListCard
-              key={list.id}
-              list={list}
-              onSelect={handleSelectList}
-              onDuplicate={handleDuplicateList}
-              onDelete={handleDeleteList}
-            />
-          ))}
-        </ul>
+        <>
+          {templates.length > 0 && (
+            <div className={styles.templatesSection}>
+              <p className={styles.templatesLabel}>📌 Plantillas</p>
+              <ul className={styles.list}>
+                {templates.map((list) => (
+                  <ListCard
+                    key={list.id}
+                    list={list}
+                    onSelect={handleSelectList}
+                    onDuplicate={handleDuplicateList}
+                    onDelete={handleDeleteList}
+                    onToggleTemplate={handleToggleTemplate}
+                    onUseTemplate={handleUseTemplate}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+          <ul className={styles.list}>
+            {regularLists.map((list) => (
+              <ListCard
+                key={list.id}
+                list={list}
+                onSelect={handleSelectList}
+                onDuplicate={handleDuplicateList}
+                onDelete={handleDeleteList}
+                onToggleTemplate={handleToggleTemplate}
+                onUseTemplate={handleUseTemplate}
+              />
+            ))}
+          </ul>
+        </>
       )}
     </div>
   )
@@ -132,9 +191,18 @@ interface ListCardProps {
   onSelect: (id: string) => void
   onDuplicate: (id: string) => void
   onDelete: (id: string) => void
+  onToggleTemplate: (id: string) => void
+  onUseTemplate: (id: string) => void
 }
 
-const ListCard = memo(function ListCard({ list, onSelect, onDuplicate, onDelete }: ListCardProps) {
+const ListCard = memo(function ListCard({
+  list,
+  onSelect,
+  onDuplicate,
+  onDelete,
+  onToggleTemplate,
+  onUseTemplate,
+}: ListCardProps) {
   const total = list.items.length
   const done = useMemo(() => list.items.filter((item) => item.done).length, [list.items])
 
@@ -142,7 +210,25 @@ const ListCard = memo(function ListCard({ list, onSelect, onDuplicate, onDelete 
     <li className={styles.card}>
       <button className={styles.cardMain} onClick={() => onSelect(list.id)}>
         <span className={styles.cardName}>{list.name}</span>
-        <span className={styles.cardMeta}>{total === 0 ? 'Sin ítems' : `${done} de ${total} comprados`}</span>
+        <span className={styles.cardMeta}>
+          {list.isTemplate ? 'Plantilla' : total === 0 ? 'Sin ítems' : `${done} de ${total} comprados`}
+        </span>
+      </button>
+      {list.isTemplate && (
+        <button
+          className={styles.useTemplateButton}
+          aria-label={`Usar plantilla ${list.name}`}
+          onClick={() => onUseTemplate(list.id)}
+        >
+          <Icon name="reuse" size={17} />
+        </button>
+      )}
+      <button
+        className={list.isTemplate ? `${styles.pinButton} ${styles.pinButtonActive}` : styles.pinButton}
+        aria-label={list.isTemplate ? `Quitar ${list.name} de plantillas` : `Marcar ${list.name} como plantilla`}
+        onClick={() => onToggleTemplate(list.id)}
+      >
+        <Icon name="bookmark" size={16} filled={list.isTemplate} />
       </button>
       <button
         className={styles.duplicateButton}

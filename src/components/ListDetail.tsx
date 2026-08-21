@@ -1,7 +1,18 @@
 import { memo, useCallback, useMemo, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
 import { describeUploadError } from '../lib/imageUpload'
+import { useSwipeToDelete } from '../hooks/useSwipeToDelete'
 import { Icon } from './Icon'
 import styles from './ListDetail.module.css'
 
@@ -13,7 +24,7 @@ interface ListDetailProps {
   onUpdateItem: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
   onToggleItem: (itemId: string) => void
   onDeleteItem: (itemId: string) => void
-  onMoveItem: (itemId: string, neighborId: string) => void
+  onReorderItems: (orderedItemIds: string[]) => void
   onUploadItemImage: (itemId: string, file: File) => Promise<void>
   onRemoveItemImage: (itemId: string) => void
   onClearCompleted: () => void
@@ -63,7 +74,7 @@ export function ListDetail({
   onUpdateItem,
   onToggleItem,
   onDeleteItem,
-  onMoveItem,
+  onReorderItems,
   onUploadItemImage,
   onRemoveItemImage,
   onClearCompleted,
@@ -102,6 +113,28 @@ export function ListDetail({
   const pendingTotal = useMemo(
     () => pending.reduce((sum, item) => sum + (item.price ?? 0), 0),
     [pending],
+  )
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+
+      for (const group of pendingGroups) {
+        const ids = group.items.map((item) => item.id)
+        const activeIndex = ids.indexOf(String(active.id))
+        const overIndex = ids.indexOf(String(over.id))
+        if (activeIndex === -1 || overIndex === -1) continue
+        onReorderItems(arrayMove(ids, activeIndex, overIndex))
+        return
+      }
+    },
+    [pendingGroups, onReorderItems],
   )
 
   const handleToggle = useCallback((itemId: string) => onToggleItem(itemId), [onToggleItem])
@@ -249,62 +282,65 @@ export function ListDetail({
           <p>Ningún ítem coincide con "{query}".</p>
         </div>
       ) : (
-        <div className={styles.groups}>
-          {pendingGroups.map((group) => (
-            <div key={group.label} className={styles.categoryGroup}>
-              {pendingGroups.length > 1 && <p className={styles.categoryLabel}>{group.label}</p>}
-              <ul className={styles.itemList}>
-                {group.items.map((item, index) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    categories={categories}
-                    onToggle={handleToggle}
-                    onDelete={handleDelete}
-                    onSave={handleSave}
-                    onUploadImage={onUploadItemImage}
-                    onRemoveImage={onRemoveItemImage}
-                    onMoveUp={index > 0 ? () => onMoveItem(item.id, group.items[index - 1].id) : undefined}
-                    onMoveDown={
-                      index < group.items.length - 1
-                        ? () => onMoveItem(item.id, group.items[index + 1].id)
-                        : undefined
-                    }
-                  />
-                ))}
-              </ul>
-            </div>
-          ))}
-          {done.length > 0 && (
-            <div className={styles.doneSection}>
-              <div className={styles.doneHeader}>
-                <p className={styles.doneLabel}>Comprados</p>
-                <button
-                  className={styles.clearCompletedButton}
-                  onClick={() => {
-                    if (confirm('¿Vaciar los ítems comprados?')) onClearCompleted()
-                  }}
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <div className={styles.groups}>
+            {pendingGroups.map((group) => (
+              <div key={group.label} className={styles.categoryGroup}>
+                {pendingGroups.length > 1 && <p className={styles.categoryLabel}>{group.label}</p>}
+                <SortableContext
+                  items={group.items.map((item) => item.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  Vaciar
-                </button>
+                  <ul className={styles.itemList}>
+                    {group.items.map((item) => (
+                      <ItemRow
+                        key={item.id}
+                        item={item}
+                        categories={categories}
+                        draggable
+                        onToggle={handleToggle}
+                        onDelete={handleDelete}
+                        onSave={handleSave}
+                        onUploadImage={onUploadItemImage}
+                        onRemoveImage={onRemoveItemImage}
+                      />
+                    ))}
+                  </ul>
+                </SortableContext>
               </div>
-              <ul className={styles.itemList}>
-                {done.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    categories={categories}
-                    onToggle={handleToggle}
-                    onDelete={handleDelete}
-                    onSave={handleSave}
-                    onUploadImage={onUploadItemImage}
-                    onRemoveImage={onRemoveItemImage}
-                  />
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+            ))}
+            {done.length > 0 && (
+              <div className={styles.doneSection}>
+                <div className={styles.doneHeader}>
+                  <p className={styles.doneLabel}>Comprados</p>
+                  <button
+                    className={styles.clearCompletedButton}
+                    onClick={() => {
+                      if (confirm('¿Vaciar los ítems comprados?')) onClearCompleted()
+                    }}
+                  >
+                    Vaciar
+                  </button>
+                </div>
+                <ul className={styles.itemList}>
+                  {done.map((item) => (
+                    <ItemRow
+                      key={item.id}
+                      item={item}
+                      categories={categories}
+                      draggable={false}
+                      onToggle={handleToggle}
+                      onDelete={handleDelete}
+                      onSave={handleSave}
+                      onUploadImage={onUploadItemImage}
+                      onRemoveImage={onRemoveItemImage}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </DndContext>
       )}
     </div>
   )
@@ -313,25 +349,23 @@ export function ListDetail({
 interface ItemRowProps {
   item: Item
   categories: Category[]
+  draggable: boolean
   onToggle: (itemId: string) => void
   onDelete: (itemId: string) => void
   onSave: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
   onUploadImage: (itemId: string, file: File) => Promise<void>
   onRemoveImage: (itemId: string) => void
-  onMoveUp?: () => void
-  onMoveDown?: () => void
 }
 
 const ItemRow = memo(function ItemRow({
   item,
   categories,
+  draggable,
   onToggle,
   onDelete,
   onSave,
   onUploadImage,
   onRemoveImage,
-  onMoveUp,
-  onMoveDown,
 }: ItemRowProps) {
   const [editing, setEditing] = useState(false)
   const [nameDraft, setNameDraft] = useState(item.name)
@@ -340,6 +374,18 @@ const ItemRow = memo(function ItemRow({
   const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    disabled: !draggable,
+  })
+  const dragStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 1 : undefined,
+  }
+
+  const { offset: swipeOffset, handlers: swipeHandlers } = useSwipeToDelete(() => onDelete(item.id))
 
   const category = item.categoryId ? categories.find((c) => c.id === item.categoryId) : undefined
 
@@ -383,7 +429,7 @@ const ItemRow = memo(function ItemRow({
 
   if (editing) {
     return (
-      <li className={styles.item}>
+      <li ref={setNodeRef} style={dragStyle} className={styles.item}>
         <form className={styles.editForm} onSubmit={handleSubmit}>
           <div className={styles.editImageRow}>
             <span className={styles.editImagePreview}>
@@ -461,56 +507,63 @@ const ItemRow = memo(function ItemRow({
   }
 
   return (
-    <li className={`${styles.item} ${item.done ? styles.itemDone : ''}`}>
-      <button
-        className={styles.checkbox}
-        onClick={() => onToggle(item.id)}
-        aria-label={item.done ? 'Marcar como pendiente' : 'Marcar como comprado'}
+    <li ref={setNodeRef} style={dragStyle} className={styles.itemWrapper}>
+      <div className={styles.swipeBg} aria-hidden="true">
+        <Icon name="close" size={18} />
+      </div>
+      <div
+        className={`${styles.item} ${item.done ? styles.itemDone : ''}`}
+        style={{ transform: `translateX(${swipeOffset}px)` }}
+        {...swipeHandlers}
       >
-        {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
-      </button>
-      <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
-        {(item.imageUrl || category) && (
-          <span className={styles.itemThumb}>
-            {item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
-            ) : (
-              category?.icon
-            )}
-          </span>
+        {draggable && (
+          <button
+            className={styles.dragHandle}
+            aria-label={`Reordenar ${item.name}`}
+            {...attributes}
+            {...listeners}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+              listeners?.onPointerDown?.(e)
+            }}
+          >
+            <Icon name="grip" size={16} />
+          </button>
         )}
-        <span className={styles.itemName}>{item.name}</span>
-        <span className={styles.itemMeta}>
-          {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}
-          {item.price != null && <span className={styles.itemPrice}>{formatPrice(item.price)}</span>}
-        </span>
-      </button>
-      {(onMoveUp || onMoveDown) && (
-        <div className={styles.moveButtons}>
-          <button
-            className={styles.moveButton}
-            onClick={onMoveUp}
-            disabled={!onMoveUp}
-            aria-label={`Subir ${item.name}`}
-          >
-            <Icon name="chevronUp" size={14} />
-          </button>
-          <button
-            className={styles.moveButton}
-            onClick={onMoveDown}
-            disabled={!onMoveDown}
-            aria-label={`Bajar ${item.name}`}
-          >
-            <Icon name="chevronDown" size={14} />
-          </button>
-        </div>
-      )}
-      <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
-        <Icon name="edit" size={17} />
-      </button>
-      <button className={styles.itemDelete} onClick={() => onDelete(item.id)} aria-label={`Eliminar ${item.name}`}>
-        <Icon name="close" size={17} />
-      </button>
+        <button
+          className={styles.checkbox}
+          onClick={() => onToggle(item.id)}
+          aria-label={item.done ? 'Marcar como pendiente' : 'Marcar como comprado'}
+        >
+          {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
+        </button>
+        <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
+          {(item.imageUrl || category) && (
+            <span className={styles.itemThumb}>
+              {item.imageUrl ? (
+                <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
+              ) : (
+                category?.icon
+              )}
+            </span>
+          )}
+          <span className={styles.itemName}>{item.name}</span>
+          <span className={styles.itemMeta}>
+            {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}
+            {item.price != null && <span className={styles.itemPrice}>{formatPrice(item.price)}</span>}
+          </span>
+        </button>
+        <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
+          <Icon name="edit" size={17} />
+        </button>
+        <button
+          className={styles.itemDelete}
+          onClick={() => onDelete(item.id)}
+          aria-label={`Eliminar ${item.name}`}
+        >
+          <Icon name="close" size={17} />
+        </button>
+      </div>
     </li>
   )
 })

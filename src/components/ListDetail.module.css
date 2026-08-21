@@ -262,19 +262,34 @@
   color: #dc2626;
 }
 
+.itemWrapper {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.swipeBg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 24px;
+  background: #dc2626;
+  color: #ffffff;
+}
+
 .item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--color-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  padding: 4px;
-  transition: background-color 0.15s ease, transform 0.1s ease;
-}
-
-.item:active {
-  transform: scale(0.99);
+  padding: 4px 4px 4px 10px;
+  touch-action: pan-y;
+  transition: background-color 0.15s ease, transform 0.12s ease;
 }
 
 .itemDone {
@@ -285,7 +300,6 @@
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  margin-left: 6px;
   border-radius: 50%;
   border: 2px solid var(--color-primary);
   background: var(--color-surface);
@@ -378,30 +392,23 @@
   color: var(--color-primary-dark);
 }
 
-.moveButtons {
+.dragHandle {
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.moveButton {
-  width: 26px;
-  height: 20px;
+  width: 28px;
+  height: 44px;
   border: none;
   background: none;
   color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s ease;
+  touch-action: none;
+  cursor: grab;
 }
 
-.moveButton:disabled {
-  opacity: 0.25;
-}
-
-.moveButton:not(:disabled):active {
+.dragHandle:active {
   color: var(--color-primary-dark);
+  cursor: grabbing;
 }
 
 .itemEdit,
