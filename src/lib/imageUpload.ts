@@ -60,25 +60,30 @@ export async function uploadItemImage(userId: string, itemId: string, file: File
 }
 
 // Borra la foto de un item de Storage, pero solo si el item es el dueño del
-// archivo (no una copia duplicada de otro item) y ningún otro item la sigue
+// archivo (no una copia duplicada de otro item), ningún otro item la sigue
 // usando (duplicateList copia el image_url de items ya duplicados sin subir
-// un archivo propio, así que varios items pueden apuntar al mismo path).
+// un archivo propio, así que varios items pueden apuntar al mismo path), y
+// no quedó guardada como la foto recordada de ese producto (ver
+// lib/productPhotos.ts) para autocompletar próximas compras.
 export async function deleteItemImage(userId: string, itemId: string, imageUrl: string | undefined) {
   if (!imageUrl) return
   const path = `${userId}/${itemId}.jpg`
   if (!imageUrl.includes(path)) return
 
-  const { count, error: countError } = await supabase
-    .from('items')
-    .select('id', { count: 'exact', head: true })
-    .neq('id', itemId)
-    .like('image_url', `%${path}%`)
+  const [itemsResult, photosResult] = await Promise.all([
+    supabase.from('items').select('id', { count: 'exact', head: true }).neq('id', itemId).like('image_url', `%${path}%`),
+    supabase.from('product_photos').select('id', { count: 'exact', head: true }).like('image_url', `%${path}%`),
+  ])
 
-  if (countError) {
-    console.error('deleteItemImage count error', { path, error: countError })
+  if (itemsResult.error) {
+    console.error('deleteItemImage count error', { path, error: itemsResult.error })
     return
   }
-  if (count && count > 0) return
+  if (photosResult.error) {
+    console.error('deleteItemImage product_photos count error', { path, error: photosResult.error })
+    return
+  }
+  if ((itemsResult.count ?? 0) > 0 || (photosResult.count ?? 0) > 0) return
 
   const { error } = await supabase.storage.from('item-images').remove([path])
   if (error) console.error('deleteItemImage error', { path, error })

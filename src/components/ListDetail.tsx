@@ -20,6 +20,7 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
+import { getCatalogEmoji } from '../lib/productCatalog'
 import { describeUploadError } from '../lib/imageUpload'
 import { useSwipeToDelete } from '../hooks/useSwipeToDelete'
 import { hasSeenSwipeHint, markSwipeHintSeen } from '../lib/swipeHint'
@@ -433,6 +434,7 @@ const ItemRow = memo(function ItemRow({
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const catalogEmoji = useMemo(() => getCatalogEmoji(item.name), [item.name])
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -604,7 +606,7 @@ const ItemRow = memo(function ItemRow({
             <Icon name="grip" size={16} />
           </button>
         )}
-        {item.imageUrl && (
+        {item.imageUrl ? (
           <button
             type="button"
             className={styles.itemThumb}
@@ -613,6 +615,12 @@ const ItemRow = memo(function ItemRow({
           >
             <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
           </button>
+        ) : (
+          catalogEmoji && (
+            <span className={styles.itemThumb} aria-hidden="true">
+              {catalogEmoji}
+            </span>
+          )
         )}
         <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
           <span className={styles.itemName}>{item.name}</span>

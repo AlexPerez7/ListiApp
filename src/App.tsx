@@ -5,6 +5,7 @@ import { useShoppingLists } from './hooks/useShoppingLists'
 import { useCategories } from './hooks/useCategories'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
 import { uploadItemImage, deleteItemImage } from './lib/imageUpload'
+import { rememberProductPhoto } from './lib/productPhotos'
 import { buildBackup, downloadBackup, parseBackup } from './lib/backup'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { Home } from './components/Home'
@@ -147,6 +148,8 @@ function App() {
     try {
       const url = await uploadItemImage(session.user.id, itemId, file)
       setItemImage(listId, itemId, url)
+      const itemName = lists.find((l) => l.id === listId)?.items.find((i) => i.id === itemId)?.name
+      if (itemName) rememberProductPhoto(itemName, url)
     } catch (err) {
       console.error('Error al subir la foto del ítem:', err)
       throw err
