@@ -1,4 +1,13 @@
-import { memo, useCallback, useMemo, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react'
 import {
   DndContext,
   KeyboardSensor,
@@ -13,6 +22,7 @@ import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
 import { describeUploadError } from '../lib/imageUpload'
 import { useSwipeToDelete } from '../hooks/useSwipeToDelete'
+import { hasSeenSwipeHint, markSwipeHintSeen } from '../lib/swipeHint'
 import { Icon } from './Icon'
 import styles from './ListDetail.module.css'
 
@@ -116,6 +126,9 @@ export function ListDetail({
     () => pending.reduce((sum, item) => sum + (item.price ?? 0), 0),
     [pending],
   )
+
+  const [showSwipeHint] = useState(() => !hasSeenSwipeHint())
+  const firstPendingItemId = pendingGroups[0]?.items[0]?.id
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -311,6 +324,7 @@ export function ListDetail({
                         onSave={handleSave}
                         onUploadImage={onUploadItemImage}
                         onRemoveImage={onRemoveItemImage}
+                        showSwipeHint={showSwipeHint && item.id === firstPendingItemId}
                       />
                     ))}
                   </ul>
@@ -363,6 +377,7 @@ interface ItemRowProps {
   onSave: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
   onUploadImage: (itemId: string, file: File) => Promise<void>
   onRemoveImage: (itemId: string) => void
+  showSwipeHint?: boolean
 }
 
 const ItemRow = memo(function ItemRow({
@@ -374,6 +389,7 @@ const ItemRow = memo(function ItemRow({
   onSave,
   onUploadImage,
   onRemoveImage,
+  showSwipeHint,
 }: ItemRowProps) {
   const [editing, setEditing] = useState(false)
   const [nameDraft, setNameDraft] = useState(item.name)
@@ -394,7 +410,21 @@ const ItemRow = memo(function ItemRow({
     zIndex: isDragging ? 1 : undefined,
   }
 
-  const { offset: swipeOffset, handlers: swipeHandlers } = useSwipeToDelete(() => onDelete(item.id))
+  const {
+    offset: swipeOffset,
+    peeking,
+    handlers: swipeHandlers,
+    peek,
+  } = useSwipeToDelete(() => onDelete(item.id))
+
+  useEffect(() => {
+    if (!showSwipeHint) return
+    const timer = window.setTimeout(() => {
+      peek()
+      markSwipeHintSeen()
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [showSwipeHint, peek])
 
   function startEditing() {
     setNameDraft(item.name)
@@ -520,7 +550,10 @@ const ItemRow = memo(function ItemRow({
       </div>
       <div
         className={`${styles.item} ${item.done ? styles.itemDone : ''}`}
-        style={{ transform: `translateX(${swipeOffset}px)` }}
+        style={{
+          transform: `translateX(${swipeOffset}px)`,
+          transition: peeking ? 'transform 0.35s ease' : undefined,
+        }}
         {...swipeHandlers}
       >
         {draggable && (

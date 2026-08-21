@@ -14,6 +14,9 @@ export const DEFAULT_CATEGORIES: { name: string; icon: string }[] = [
 export const ICON_OPTIONS = [
   '🥦', '🥩', '🥛', '🍞', '🛒', '🥤', '🧊', '🧽', '🧴', '🏷️',
   '🍎', '🧀', '🍗', '🐟', '🧅', '🍫', '☕', '🧂', '📦', '❓',
+  '👕', '👗', '👖', '🧦', '👟', '💄', '💊', '🩹', '🍼', '🧸',
+  '🐾', '🦴', '🔌', '💡', '🔋', '✏️', '📚', '🔧', '🔨', '🌱',
+  '🪴', '⚽', '🎒', '🎁', '🎈', '🚗', '⛽', '🛋️', '🕯️', '🧵',
 ]
 
 export const UNCATEGORIZED_LABEL = 'Sin categoría'
