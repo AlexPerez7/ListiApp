@@ -48,7 +48,7 @@ const CATALOG: Record<string, string> = {
   milanesas: 'meat',
   pollo: 'chicken',
   pechuga: 'chicken',
-  nuggets: 'chicken',
+  nuggets: 'nuggets',
   pescado: 'fish',
   atun: 'fish',
   jamon: 'ham',
