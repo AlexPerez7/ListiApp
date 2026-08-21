@@ -14,12 +14,6 @@ const ICONS: Record<string, ReactElement> = {
   citrus: (
     <>
       <circle cx="12" cy="13" r="6.5" fill="#f5a623" />
-      <path
-        d="M12 6.7v12.6M8.4 8v10M15.6 8v10M6.5 10.2h11M6.5 15.8h11"
-        stroke="#e08e0b"
-        strokeWidth="0.6"
-        opacity="0.6"
-      />
       <path d="M12 6.5v2" stroke="#5a8f3c" strokeWidth="1.4" strokeLinecap="round" />
     </>
   ),
@@ -69,7 +63,7 @@ const ICONS: Record<string, ReactElement> = {
     <>
       <path d="M9 6 12 8l3-2 1 2-4 2-4-2Z" fill="#5a8f3c" />
       <ellipse cx="12" cy="15" rx="5" ry="6.5" fill="#f5a623" />
-      <path d="M8.5 11.5 15.5 11.5M8.2 15 15.8 15M8.5 18.5 15.5 18.5" stroke="#c97e12" strokeWidth="0.9" />
+      <path d="M8.2 15h7.6" stroke="#c97e12" strokeWidth="0.9" />
     </>
   ),
   avocado: (
@@ -97,12 +91,6 @@ const ICONS: Record<string, ReactElement> = {
   onion: (
     <>
       <path d="M12 20c-3.3 0-5.5-2.6-5.5-5.8 0-3.3 2.6-6.7 5.5-8.7 2.9 2 5.5 5.4 5.5 8.7 0 3.2-2.2 5.8-5.5 5.8Z" fill="#dcc7e8" />
-      <path
-        d="M9.2 12.3c1 2.5 1 5 0 7.2M14.8 12.3c-1 2.5-1 5 0 7.2M12 6.5v13.3"
-        stroke="#c3aad6"
-        strokeWidth="0.8"
-        fill="none"
-      />
       <path d="M11 5.5c-.4-1-.1-2 .5-2.5.6.5.9 1.5.5 2.5" fill="#9bc158" />
     </>
   ),
@@ -136,16 +124,13 @@ const ICONS: Record<string, ReactElement> = {
         fill="#7fae4a"
       />
       <path d="M5.8 12.6c3.5-.9 7-1.7 10.5-2.6" stroke="#5c8a38" strokeWidth="0.9" strokeLinecap="round" />
-      {[[7, 13.2], [10.3, 12.4], [13.6, 11.6], [16.3, 11]].map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r="0.45" fill="#4c7a2b" />
-      ))}
     </>
   ),
   corn: (
     <>
       <path d="M9 5.5c1.5-1.3 4.5-1.3 6 0l-1 14c-.3 2-3.7 2-4 0Z" fill="#f4c542" />
-      {[7, 9.5, 12, 14.5, 17].map((y, i) => (
-        <path key={i} d={`M9.3 ${y} h5.4`} stroke="#e0a91a" strokeWidth="0.8" />
+      {[9, 13].map((y, i) => (
+        <path key={i} d={`M9.4 ${y} h5.2`} stroke="#e0a91a" strokeWidth="0.9" />
       ))}
       <path d="M9.5 5c-1-.7-2-.5-2.5.3M14.5 5c1-.7 2-.5 2.5.3" stroke="#5a8f3c" strokeWidth="1.1" fill="none" strokeLinecap="round" />
     </>
@@ -153,13 +138,7 @@ const ICONS: Record<string, ReactElement> = {
   garlic: (
     <>
       <path d="M12 20c-3 0-5-2-5-4.8 0-3 1.7-5.3 2.6-7.4.4-1 .1-1.8.9-2.3.5-.4 1 0 1 .6.2-.6.8-.8 1.3-.4.7.5.3 1.4.6 2.3.8 2.1 3.6 4.3 3.6 7.2 0 2.8-2 4.8-5 4.8Z" fill="#f3ede0" />
-      <path
-        d="M12 8v12M9.6 9.6c-.9 3-.9 6 0 8.6M14.4 9.6c.9 3 .9 6 0 8.6"
-        stroke="#d8cdb5"
-        strokeWidth="0.8"
-        fill="none"
-      />
-      <path d="M9.5 6.5c1.5 1 3.5 1 5 0" stroke="#e3d9c2" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+      <path d="M12 8v12" stroke="#d8cdb5" strokeWidth="0.8" />
     </>
   ),
   pepper: (
@@ -196,13 +175,7 @@ const ICONS: Record<string, ReactElement> = {
   ham: (
     <>
       <circle cx="12" cy="13" r="7" fill="#e78a94" />
-      <path
-        d="M9 9c1 1.5 1 3 0 4.5M15 9c-1 1.5-1 3 0 4.5M8.5 15.5c1 1 3 1.5 4.5 1"
-        stroke="#f4bcc4"
-        strokeWidth="1.1"
-        fill="none"
-        strokeLinecap="round"
-      />
+      <path d="M9 9c1 1.5 1 3 0 4.5" stroke="#f4bcc4" strokeWidth="1.1" fill="none" strokeLinecap="round" />
       <circle cx="12" cy="13" r="7" fill="none" stroke="#d4707c" strokeWidth="1" />
     </>
   ),
@@ -211,24 +184,13 @@ const ICONS: Record<string, ReactElement> = {
       <ellipse cx="12" cy="17.3" rx="6.8" ry="2.3" fill="#a53a30" />
       <ellipse cx="12" cy="14.7" rx="6.8" ry="2.3" fill="#c14a3c" />
       <ellipse cx="12" cy="12.1" rx="6.8" ry="2.3" fill="#d2665a" />
-      <ellipse cx="9.2" cy="11.2" rx="1.6" ry="0.55" fill="#f2b9ae" opacity="0.6" />
-      <ellipse cx="14" cy="11.6" rx="1.1" ry="0.4" fill="#f2b9ae" opacity="0.5" />
     </>
   ),
   sausage: (
-    <>
-      <path
-        d="M6 16c-1.4-1.4-1.4-4 0-5.4 3.4-3.4 9-3.4 12 0 1.4 1.4 1.4 4 0 5.4-3.4 3.4-9 3.4-12 0Z"
-        fill="#c9695a"
-      />
-      <path
-        d="M8.7 10.1c1.7 2.1 1.7 5.7 0 7.8M13.3 8.1c1.7 2.1 1.7 5.7 0 7.8"
-        stroke="#a94f42"
-        strokeWidth="0.9"
-        fill="none"
-        strokeLinecap="round"
-      />
-    </>
+    <path
+      d="M6 16c-1.4-1.4-1.4-4 0-5.4 3.4-3.4 9-3.4 12 0 1.4 1.4 1.4 4 0 5.4-3.4 3.4-9 3.4-12 0Z"
+      fill="#c9695a"
+    />
   ),
   milk: (
     <>
@@ -247,23 +209,13 @@ const ICONS: Record<string, ReactElement> = {
     <>
       <rect x="8.5" y="7" width="10" height="11" rx="1" fill="#f7d95c" stroke="#e0bd2e" strokeWidth="0.6" />
       <path d="M8.5 7 4 5v14l4.5-2Z" fill="#fdf6e0" stroke="#e6dcc0" strokeWidth="0.6" />
-      <path d="M4.8 6.3 8.1 7.8M4.8 16.3l3.3-1.5" stroke="#e6dcc0" strokeWidth="0.5" />
     </>
   ),
   bread: (
-    <>
-      <path
-        d="M4.5 15c0-4.5 3.4-7.5 7.5-7.5s7.5 3 7.5 7.5c0 1.7-1.3 2.5-3 2.5H7.5c-1.7 0-3-.8-3-2.5Z"
-        fill="#d9a45f"
-      />
-      <path
-        d="M8 9.5c.6 1.4.6 3 0 4.4M12 8.3c.6 1.6.6 3.4 0 5M16 9.5c-.6 1.4-.6 3 0 4.4"
-        stroke="#c08a44"
-        strokeWidth="0.8"
-        fill="none"
-        strokeLinecap="round"
-      />
-    </>
+    <path
+      d="M4.5 15c0-4.5 3.4-7.5 7.5-7.5s7.5 3 7.5 7.5c0 1.7-1.3 2.5-3 2.5H7.5c-1.7 0-3-.8-3-2.5Z"
+      fill="#d9a45f"
+    />
   ),
   pastry: (
     <path
@@ -287,11 +239,6 @@ const ICONS: Record<string, ReactElement> = {
     <>
       <path d="M4.5 15.5c0-1 .9-1.7 2-1.7h11c1.1 0 2 .7 2 1.7 0 2.8-3.4 4.7-7.5 4.7s-7.5-1.9-7.5-4.7Z" fill="#e9e4d3" />
       <path d="M6 13.8c.2-4 3-6.8 6-6.8s5.8 2.8 6 6.8Z" fill="#f7f4ea" stroke="#e3ddc8" strokeWidth="0.5" />
-      {[[9, 10.5, 30], [12, 9, -20], [14.5, 11, 15], [10.5, 12.5, -10], [13.5, 12.8, 25]].map(
-        ([cx, cy, rot], i) => (
-          <rect key={i} x={cx - 1.1} y={cy - 0.4} width="2.2" height="0.8" rx="0.4" fill="#d5cdb0" transform={`rotate(${rot} ${cx} ${cy})`} />
-        ),
-      )}
     </>
   ),
   pasta: (
@@ -373,7 +320,6 @@ const ICONS: Record<string, ReactElement> = {
         fill="#e0433f"
       />
       <rect x="10" y="2" width="4" height="1.6" rx="0.5" fill="#8a2a26" />
-      <path d="M9.5 11h5" stroke="#b8332f" strokeWidth="0.8" />
     </>
   ),
   juice: (
