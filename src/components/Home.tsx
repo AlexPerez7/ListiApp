@@ -1,6 +1,5 @@
-import { memo, useCallback, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { memo, useCallback, useMemo, useState, type FormEvent } from 'react'
 import type { ShoppingList } from '../types'
-import type { Theme } from '../lib/theme'
 import { Icon } from './Icon'
 import { Logo } from './Logo'
 import { SkeletonList } from './Skeleton'
@@ -9,37 +8,28 @@ import styles from './Home.module.css'
 interface HomeProps {
   lists: ShoppingList[]
   loading: boolean
-  theme: Theme
-  onToggleTheme: () => void
   onCreateList: (name: string) => void
   onSelectList: (id: string) => void
   onDuplicateList: (id: string) => void
   onDeleteList: (id: string) => void
   onToggleTemplate: (id: string) => void
   onUseTemplate: (id: string) => void
-  onExport: () => void
-  onImport: (file: File) => void
-  onSignOut: () => void
+  onConfirm: (message: string) => Promise<boolean>
 }
 
 export function Home({
   lists,
   loading,
-  theme,
-  onToggleTheme,
   onCreateList,
   onSelectList,
   onDuplicateList,
   onDeleteList,
   onToggleTemplate,
   onUseTemplate,
-  onExport,
-  onImport,
-  onSignOut,
+  onConfirm,
 }: HomeProps) {
   const [name, setName] = useState('')
   const [query, setQuery] = useState('')
-  const importInputRef = useRef<HTMLInputElement>(null)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -47,12 +37,6 @@ export function Home({
     if (!trimmed) return
     onCreateList(trimmed)
     setName('')
-  }
-
-  function handleImportChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (file) onImport(file)
   }
 
   const handleSelectList = useCallback((id: string) => onSelectList(id), [onSelectList])
@@ -79,35 +63,6 @@ export function Home({
             <h1 className={styles.title}>ListiApp</h1>
             <p className={styles.subtitle}>Tus listas de compras</p>
           </div>
-        </div>
-        <div className={styles.headerActions}>
-          <button className={styles.themeButton} onClick={onExport} aria-label="Exportar tus datos (backup)">
-            <Icon name="download" size={17} />
-          </button>
-          <button
-            className={styles.themeButton}
-            onClick={() => importInputRef.current?.click()}
-            aria-label="Importar un backup"
-          >
-            <Icon name="upload" size={17} />
-          </button>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept="application/json"
-            onChange={handleImportChange}
-            hidden
-          />
-          <button
-            className={styles.themeButton}
-            onClick={onToggleTheme}
-            aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-          >
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={17} />
-          </button>
-          <button className={styles.signOutButton} onClick={onSignOut}>
-            Salir
-          </button>
         </div>
       </header>
 
@@ -162,6 +117,7 @@ export function Home({
                     onDelete={handleDeleteList}
                     onToggleTemplate={handleToggleTemplate}
                     onUseTemplate={handleUseTemplate}
+                    onConfirm={onConfirm}
                   />
                 ))}
               </ul>
@@ -177,6 +133,7 @@ export function Home({
                 onDelete={handleDeleteList}
                 onToggleTemplate={handleToggleTemplate}
                 onUseTemplate={handleUseTemplate}
+                onConfirm={onConfirm}
               />
             ))}
           </ul>
@@ -193,6 +150,7 @@ interface ListCardProps {
   onDelete: (id: string) => void
   onToggleTemplate: (id: string) => void
   onUseTemplate: (id: string) => void
+  onConfirm: (message: string) => Promise<boolean>
 }
 
 const ListCard = memo(function ListCard({
@@ -202,6 +160,7 @@ const ListCard = memo(function ListCard({
   onDelete,
   onToggleTemplate,
   onUseTemplate,
+  onConfirm,
 }: ListCardProps) {
   const total = list.items.length
   const done = useMemo(() => list.items.filter((item) => item.done).length, [list.items])
@@ -240,8 +199,8 @@ const ListCard = memo(function ListCard({
       <button
         className={styles.deleteButton}
         aria-label={`Eliminar lista ${list.name}`}
-        onClick={() => {
-          if (confirm(`¿Eliminar la lista "${list.name}"?`)) {
+        onClick={async () => {
+          if (await onConfirm(`¿Eliminar la lista "${list.name}"?`)) {
             onDelete(list.id)
           }
         }}

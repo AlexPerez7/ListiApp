@@ -30,6 +30,7 @@ interface ListDetailProps {
   onClearCompleted: () => void
   onUpdateListName: (name: string) => void
   onDeleteList: () => void
+  onConfirm: (message: string, confirmLabel?: string) => Promise<boolean>
 }
 
 interface ItemGroup {
@@ -80,6 +81,7 @@ export function ListDetail({
   onClearCompleted,
   onUpdateListName,
   onDeleteList,
+  onConfirm,
 }: ListDetailProps) {
   const [name, setName] = useState('')
   const [quantity, setQuantity] = useState('')
@@ -214,8 +216,8 @@ export function ListDetail({
         <button
           className={styles.deleteListButton}
           aria-label="Eliminar lista"
-          onClick={() => {
-            if (confirm(`¿Eliminar la lista "${list.name}"?`)) {
+          onClick={async () => {
+            if (await onConfirm(`¿Eliminar la lista "${list.name}"?`)) {
               onDeleteList()
             }
           }}
@@ -284,6 +286,12 @@ export function ListDetail({
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className={styles.groups}>
+            {pendingGroups.length === 0 && done.length > 0 && !query.trim() && (
+              <div className={styles.celebration}>
+                <span className={styles.celebrationEmoji}>🎉</span>
+                <p>¡Todo comprado!</p>
+              </div>
+            )}
             {pendingGroups.map((group) => (
               <div key={group.label} className={styles.categoryGroup}>
                 {pendingGroups.length > 1 && <p className={styles.categoryLabel}>{group.label}</p>}
@@ -315,8 +323,8 @@ export function ListDetail({
                   <p className={styles.doneLabel}>Comprados</p>
                   <button
                     className={styles.clearCompletedButton}
-                    onClick={() => {
-                      if (confirm('¿Vaciar los ítems comprados?')) onClearCompleted()
+                    onClick={async () => {
+                      if (await onConfirm('¿Vaciar los ítems comprados?', 'Vaciar')) onClearCompleted()
                     }}
                   >
                     Vaciar
@@ -374,6 +382,7 @@ const ItemRow = memo(function ItemRow({
   const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -537,16 +546,17 @@ const ItemRow = memo(function ItemRow({
         >
           {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
         </button>
+        {(item.imageUrl || category) && (
+          <button
+            type="button"
+            className={styles.itemThumb}
+            onClick={item.imageUrl ? () => setLightboxOpen(true) : () => onToggle(item.id)}
+            aria-label={item.imageUrl ? `Ver foto de ${item.name}` : undefined}
+          >
+            {item.imageUrl ? <img src={item.imageUrl} alt="" className={styles.itemThumbImg} /> : category?.icon}
+          </button>
+        )}
         <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
-          {(item.imageUrl || category) && (
-            <span className={styles.itemThumb}>
-              {item.imageUrl ? (
-                <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
-              ) : (
-                category?.icon
-              )}
-            </span>
-          )}
           <span className={styles.itemName}>{item.name}</span>
           <span className={styles.itemMeta}>
             {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}
@@ -564,6 +574,11 @@ const ItemRow = memo(function ItemRow({
           <Icon name="close" size={17} />
         </button>
       </div>
+      {lightboxOpen && item.imageUrl && (
+        <div className={styles.lightboxOverlay} onClick={() => setLightboxOpen(false)}>
+          <img src={item.imageUrl} alt="" className={styles.lightboxImg} />
+        </div>
+      )}
     </li>
   )
 })

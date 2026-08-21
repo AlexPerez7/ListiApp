@@ -6,13 +6,17 @@ import { useCategories } from './hooks/useCategories'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
 import { uploadItemImage, deleteItemImage } from './lib/imageUpload'
 import { buildBackup, downloadBackup, parseBackup } from './lib/backup'
+import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { Home } from './components/Home'
 import { Categories } from './components/Categories'
 import { ListDetail } from './components/ListDetail'
+import { Settings } from './components/Settings'
 import { TabBar, type Tab } from './components/TabBar'
 import { Auth } from './components/Auth'
 import { ResetPassword } from './components/ResetPassword'
 import { Toast } from './components/Toast'
+import { ConfirmDialog } from './components/ConfirmDialog'
+import { OfflineBanner } from './components/OfflineBanner'
 import type { Item, ShoppingList } from './types'
 import styles from './App.module.css'
 
@@ -27,6 +31,12 @@ function App() {
   const [toast, setToast] = useState<{ id: number; message: string; onUndo: () => void } | null>(null)
   const toastTimeoutRef = useRef<number | undefined>(undefined)
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme())
+  const [confirmState, setConfirmState] = useState<{
+    message: string
+    confirmLabel?: string
+    resolve: (value: boolean) => void
+  } | null>(null)
+  const isOnline = useOnlineStatus()
 
   useEffect(() => {
     applyTheme(theme)
@@ -73,6 +83,7 @@ function App() {
     createCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
   } = useCategories(session)
 
   function showUndoToast(message: string, onUndo: () => void, onExpire?: () => void) {
@@ -88,6 +99,15 @@ function App() {
   function handleUndoClick() {
     window.clearTimeout(toastTimeoutRef.current)
     toast?.onUndo()
+  }
+
+  function confirmAction(message: string, confirmLabel?: string): Promise<boolean> {
+    return new Promise((resolve) => setConfirmState({ message, confirmLabel, resolve }))
+  }
+
+  function handleConfirmResult(result: boolean) {
+    confirmState?.resolve(result)
+    setConfirmState(null)
   }
 
   function handleDeleteItem(list: ShoppingList, item: Item) {
@@ -165,6 +185,7 @@ function App() {
   if (selectedList) {
     return (
       <>
+        {!isOnline && <OfflineBanner />}
         <ListDetail
           list={selectedList}
           categories={categories}
@@ -184,21 +205,29 @@ function App() {
           onClearCompleted={() => clearCompleted(selectedList.id)}
           onUpdateListName={(name) => updateListName(selectedList.id, name)}
           onDeleteList={() => handleDeleteList(selectedList)}
+          onConfirm={confirmAction}
         />
         {toast && <Toast message={toast.message} actionLabel="Deshacer" onAction={handleUndoClick} />}
+        {confirmState && (
+          <ConfirmDialog
+            message={confirmState.message}
+            confirmLabel={confirmState.confirmLabel}
+            onConfirm={() => handleConfirmResult(true)}
+            onCancel={() => handleConfirmResult(false)}
+          />
+        )}
       </>
     )
   }
 
   return (
     <>
+      {!isOnline && <OfflineBanner />}
       <div className={styles.tabContent}>
         {activeTab === 'lists' ? (
           <Home
             lists={lists}
             loading={loading}
-            theme={theme}
-            onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
             onCreateList={(name) => setSelectedListId(createList(name))}
             onSelectList={setSelectedListId}
             onDuplicateList={duplicateList}
@@ -208,17 +237,25 @@ function App() {
             }}
             onToggleTemplate={toggleTemplate}
             onUseTemplate={(id) => setSelectedListId(createListFromTemplate(id) ?? null)}
-            onExport={handleExport}
-            onImport={handleImport}
-            onSignOut={() => supabase.auth.signOut()}
+            onConfirm={confirmAction}
           />
-        ) : (
+        ) : activeTab === 'categories' ? (
           <Categories
             categories={categories}
             loading={categoriesLoading}
             onCreate={createCategory}
             onUpdate={updateCategory}
             onDelete={deleteCategory}
+            onReorder={reorderCategories}
+            onConfirm={confirmAction}
+          />
+        ) : (
+          <Settings
+            theme={theme}
+            onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+            onExport={handleExport}
+            onImport={handleImport}
+            onSignOut={() => supabase.auth.signOut()}
           />
         )}
       </div>
@@ -226,6 +263,14 @@ function App() {
       <TabBar active={activeTab} onChange={setActiveTab} />
 
       {toast && <Toast message={toast.message} actionLabel="Deshacer" onAction={handleUndoClick} />}
+      {confirmState && (
+        <ConfirmDialog
+          message={confirmState.message}
+          confirmLabel={confirmState.confirmLabel}
+          onConfirm={() => handleConfirmResult(true)}
+          onCancel={() => handleConfirmResult(false)}
+        />
+      )}
     </>
   )
 }

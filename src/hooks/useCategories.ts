@@ -110,6 +110,25 @@ export function useCategories(session: Session | null) {
       })
   }
 
+  function reorderCategories(orderedCategoryIds: string[]) {
+    const positionById = new Map(orderedCategoryIds.map((id, index) => [id, index]))
+
+    setCategories((prev) =>
+      [...prev]
+        .map((category) =>
+          positionById.has(category.id) ? { ...category, position: positionById.get(category.id)! } : category,
+        )
+        .sort((a, b) => a.position - b.position),
+    )
+
+    Promise.all(
+      orderedCategoryIds.map((id, index) => supabase.from('categories').update({ position: index }).eq('id', id)),
+    ).then((results) => {
+      const failed = results.find((r) => r.error)
+      if (failed?.error) console.error('Error al reordenar categorías:', failed.error.message)
+    })
+  }
+
   function deleteCategory(categoryId: string) {
     setCategories((prev) => prev.filter((category) => category.id !== categoryId))
 
@@ -122,5 +141,5 @@ export function useCategories(session: Session | null) {
       })
   }
 
-  return { categories, loading, createCategory, updateCategory, deleteCategory }
+  return { categories, loading, createCategory, updateCategory, deleteCategory, reorderCategories }
 }
