@@ -86,7 +86,7 @@ export async function deleteItemImage(userId: string, itemId: string, imageUrl: 
 
 export function describeUploadError(err: unknown): string {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return 'Sin conexión a internet. Probá de nuevo cuando vuelvas a estar online.'
+    return 'Sin conexión a internet. Intenta de nuevo cuando vuelvas a estar en línea.'
   }
 
   const message = err instanceof Error ? err.message : String(err)
@@ -95,13 +95,13 @@ export function describeUploadError(err: unknown): string {
     return 'La imagen es muy pesada.'
   }
   if (/mime type|not supported|invalid.*type/i.test(message)) {
-    return 'Formato de imagen no soportado. Probá con otra foto.'
+    return 'Formato de imagen no soportado. Intenta con otra foto.'
   }
   if (/row-level security|permission|unauthorized/i.test(message)) {
-    return 'No tenés permiso para subir esta foto. Probá cerrar sesión y volver a entrar.'
+    return 'No tienes permiso para subir esta foto. Intenta cerrar sesión y volver a entrar.'
   }
   if (/failed to fetch|network/i.test(message)) {
-    return 'No se pudo conectar. Revisá tu conexión e intentá de nuevo.'
+    return 'No se pudo conectar. Revisa tu conexión e intenta de nuevo.'
   }
-  return 'No se pudo subir la foto. Intentá de nuevo.'
+  return 'No se pudo subir la foto. Intenta de nuevo.'
 }

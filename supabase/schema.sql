@@ -114,7 +114,7 @@ create policy "Users can delete their own item images"
   using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- Migración: si ya corriste este script antes de que existieran las columnas
--- category/price/position, corré solo este bloque (podés pegarlo solo, es
+-- category/price/position, corre solo este bloque (puedes pegarlo solo, es
 -- idempotente).
 alter table public.items add column if not exists category text;
 alter table public.items add column if not exists price numeric(10, 2);
@@ -129,7 +129,7 @@ from (
 where public.items.id = sub.id and public.items.position = 0;
 
 -- Migración: tabla de categorías editables (con ícono propio) en reemplazo
--- del texto libre en items.category. Corré este bloque si ya tenías el
+-- del texto libre en items.category. Corre este bloque si ya tenías el
 -- schema con la columna items.category (texto) — es idempotente.
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
@@ -182,7 +182,7 @@ where public.items.category = categories.name
 
 alter table public.items drop column if exists category;
 
--- Migración: foto por ítem. Corré este bloque si ya tenías el schema sin
+-- Migración: foto por ítem. Corre este bloque si ya tenías el schema sin
 -- la columna items.image_url ni el bucket de Storage — es idempotente.
 alter table public.items add column if not exists image_url text;
 
@@ -217,7 +217,7 @@ create policy "Users can delete their own item images"
 
 -- Migración: límite de tamaño (5MB) y mime type permitido (jpeg, el único
 -- que sube la app tras comprimir) en el bucket de fotos de ítems, en vez de
--- depender solo de la compresión del lado del cliente. Corré este bloque
+-- depender solo de la compresión del lado del cliente. Corre este bloque
 -- solo si tu bucket item-images no tiene estos límites — es idempotente.
 update storage.buckets
 set file_size_limit = 5242880, allowed_mime_types = array['image/jpeg']
