@@ -67,7 +67,7 @@ export function Categories({ categories, loading, onCreate, onUpdate, onDelete, 
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Categorías</h1>
-        <p className={styles.subtitle}>Organizá tus ítems por pasillo o tipo</p>
+        <p className={styles.subtitle}>Organiza tus ítems por pasillo o tipo</p>
       </header>
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -115,7 +115,7 @@ export function Categories({ categories, loading, onCreate, onUpdate, onDelete, 
       ) : categories.length === 0 ? (
         <div className={styles.empty}>
           <Icon name="tag" size={40} className={styles.emptyIcon} />
-          <p>Todavía no tenés categorías.</p>
+          <p>Todavía no tienes categorías.</p>
         </div>
       ) : filteredCategories.length === 0 ? (
         <div className={styles.empty}>
