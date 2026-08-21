@@ -642,13 +642,13 @@ const ItemRow = memo(function ItemRow({
             )}
           </button>
         )}
-        <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
+        <div className={styles.itemMain}>
           <span className={styles.itemName}>{item.name}</span>
           <span className={styles.itemMeta}>
             {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}
             {item.price != null && <span className={styles.itemPrice}>{formatPrice(item.price)}</span>}
           </span>
-        </button>
+        </div>
         <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
           <Icon name="edit" size={17} />
         </button>
