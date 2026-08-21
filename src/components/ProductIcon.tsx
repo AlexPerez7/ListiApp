@@ -7,9 +7,25 @@
 // cuando existe, se muestra en vez del dibujo.
 import type { ReactElement } from 'react'
 import appleImg from '../assets/products/apple.jpg'
+import nuggetsImg from '../assets/products/nuggets.jpg'
+import cucumberImg from '../assets/products/cucumber.jpg'
+import milkImg from '../assets/products/milk.jpg'
+import pattyRawImg from '../assets/products/pattyRaw.jpg'
+import meatImg from '../assets/products/meat.jpg'
+import cleaningImg from '../assets/products/cleaning.jpg'
+import deodorantImg from '../assets/products/deodorant.jpg'
+import oilImg from '../assets/products/oil.jpg'
 
 const PHOTOS: Record<string, string> = {
   apple: appleImg,
+  nuggets: nuggetsImg,
+  cucumber: cucumberImg,
+  milk: milkImg,
+  pattyRaw: pattyRawImg,
+  meat: meatImg,
+  cleaning: cleaningImg,
+  deodorant: deodorantImg,
+  oil: oilImg,
 }
 
 const ICONS: Record<string, ReactElement> = {
