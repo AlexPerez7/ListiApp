@@ -564,13 +564,6 @@ const ItemRow = memo(function ItemRow({
         <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
           <Icon name="edit" size={17} />
         </button>
-        <button
-          className={styles.itemDelete}
-          onClick={() => onDelete(item.id)}
-          aria-label={`Eliminar ${item.name}`}
-        >
-          <Icon name="close" size={17} />
-        </button>
       </div>
       {lightboxOpen && item.imageUrl && (
         <div className={styles.lightboxOverlay} onClick={() => setLightboxOpen(false)}>
