@@ -471,8 +471,7 @@
   cursor: grabbing;
 }
 
-.itemEdit,
-.itemDelete {
+.itemEdit {
   flex-shrink: 0;
   width: 36px;
   height: 44px;
@@ -483,10 +482,6 @@
   align-items: center;
   justify-content: center;
   transition: color 0.15s ease;
-}
-
-.itemDelete:active {
-  color: #dc2626;
 }
 
 .itemEdit:active {
