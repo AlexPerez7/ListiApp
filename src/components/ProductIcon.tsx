@@ -15,6 +15,11 @@ import meatImg from '../assets/products/meat.jpg'
 import cleaningImg from '../assets/products/cleaning.jpg'
 import deodorantImg from '../assets/products/deodorant.jpg'
 import oilImg from '../assets/products/oil.jpg'
+import celeryImg from '../assets/products/celery.jpg'
+import eggImg from '../assets/products/egg.jpg'
+import avocadoImg from '../assets/products/avocado.jpg'
+import tomatoImg from '../assets/products/tomato.jpg'
+import carrotImg from '../assets/products/carrot.jpg'
 
 const PHOTOS: Record<string, string> = {
   apple: appleImg,
@@ -26,6 +31,11 @@ const PHOTOS: Record<string, string> = {
   cleaning: cleaningImg,
   deodorant: deodorantImg,
   oil: oilImg,
+  celery: celeryImg,
+  egg: eggImg,
+  avocado: avocadoImg,
+  tomato: tomatoImg,
+  carrot: carrotImg,
 }
 
 const ICONS: Record<string, ReactElement> = {

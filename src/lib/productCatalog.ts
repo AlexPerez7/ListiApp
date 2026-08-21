@@ -36,6 +36,7 @@ const CATALOG: Record<string, string> = {
   maiz: 'corn',
   choclo: 'corn',
   ajo: 'garlic',
+  apio: 'celery',
   pimiento: 'pepper',
   morron: 'pepper',
 
