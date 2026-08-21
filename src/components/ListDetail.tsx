@@ -1,4 +1,14 @@
-import { memo, useCallback, useMemo, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
 import { Icon } from './Icon'
@@ -339,10 +349,52 @@ const ItemRow = memo(function ItemRow({
   const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const dragRef = useRef<{ startX: number; startY: number; startOffset: number; dragging: boolean } | null>(null)
 
-  const category = item.categoryId ? categories.find((c) => c.id === item.categoryId) : undefined
+  const hasMoveButtons = onMoveUp !== undefined || onMoveDown !== undefined
+  const revealWidth = hasMoveButtons ? 98 : 72
+
+  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startOffset: swipeOffset, dragging: false }
+  }
+
+  function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const state = dragRef.current
+    if (!state) return
+    const deltaX = e.clientX - state.startX
+    const deltaY = e.clientY - state.startY
+
+    if (!state.dragging) {
+      if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        dragRef.current = null
+        return
+      }
+      state.dragging = true
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
+
+    setSwipeOffset(Math.min(0, Math.max(-revealWidth, state.startOffset + deltaX)))
+  }
+
+  function handlePointerUp() {
+    const state = dragRef.current
+    dragRef.current = null
+    if (!state?.dragging) return
+    setSwipeOffset((current) => (current < -revealWidth / 2 ? -revealWidth : 0))
+  }
+
+  function handleContentClick(action: () => void) {
+    if (swipeOffset !== 0) {
+      setSwipeOffset(0)
+      return
+    }
+    action()
+  }
 
   function startEditing() {
+    setSwipeOffset(0)
     setNameDraft(item.name)
     setQuantityDraft(item.quantity ?? '')
     setCategoryIdDraft(item.categoryId ?? '')
@@ -460,56 +512,65 @@ const ItemRow = memo(function ItemRow({
   }
 
   return (
-    <li className={`${styles.item} ${item.done ? styles.itemDone : ''}`}>
-      <button
-        className={styles.checkbox}
-        onClick={() => onToggle(item.id)}
-        aria-label={item.done ? 'Marcar como pendiente' : 'Marcar como comprado'}
-      >
-        {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
-      </button>
-      <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
-        {(item.imageUrl || category) && (
-          <span className={styles.itemThumb}>
-            {item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
-            ) : (
-              category?.icon
-            )}
-          </span>
+    <li className={styles.item}>
+      <div className={styles.itemActions} style={{ width: revealWidth }}>
+        {(onMoveUp || onMoveDown) && (
+          <div className={styles.moveButtons}>
+            <button
+              className={styles.moveButton}
+              onClick={onMoveUp}
+              disabled={!onMoveUp}
+              aria-label={`Subir ${item.name}`}
+            >
+              <Icon name="chevronUp" size={14} />
+            </button>
+            <button
+              className={styles.moveButton}
+              onClick={onMoveDown}
+              disabled={!onMoveDown}
+              aria-label={`Bajar ${item.name}`}
+            >
+              <Icon name="chevronDown" size={14} />
+            </button>
+          </div>
         )}
-        <span className={styles.itemName}>{item.name}</span>
-        <span className={styles.itemMeta}>
+        <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
+          <Icon name="edit" size={17} />
+        </button>
+        <button
+          className={styles.itemDelete}
+          onClick={() => onDelete(item.id)}
+          aria-label={`Eliminar ${item.name}`}
+        >
+          <Icon name="close" size={17} />
+        </button>
+      </div>
+      <div
+        className={`${styles.itemContent} ${item.done ? styles.itemDone : ''}`}
+        style={{ transform: `translateX(${swipeOffset}px)` }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <button
+          className={styles.checkbox}
+          onClick={() => handleContentClick(() => onToggle(item.id))}
+          aria-label={item.done ? 'Marcar como pendiente' : 'Marcar como comprado'}
+        >
+          {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
+        </button>
+        <button className={styles.itemMain} onClick={() => handleContentClick(() => onToggle(item.id))}>
+          {item.imageUrl && (
+            <span className={styles.itemThumb}>
+              <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
+            </span>
+          )}
+          <span className={styles.itemName}>{item.name}</span>
           {item.quantity && <span className={styles.itemQty}>{item.quantity}</span>}
           {item.price != null && <span className={styles.itemPrice}>{formatPrice(item.price)}</span>}
-        </span>
-      </button>
-      {(onMoveUp || onMoveDown) && (
-        <div className={styles.moveButtons}>
-          <button
-            className={styles.moveButton}
-            onClick={onMoveUp}
-            disabled={!onMoveUp}
-            aria-label={`Subir ${item.name}`}
-          >
-            <Icon name="chevronUp" size={14} />
-          </button>
-          <button
-            className={styles.moveButton}
-            onClick={onMoveDown}
-            disabled={!onMoveDown}
-            aria-label={`Bajar ${item.name}`}
-          >
-            <Icon name="chevronDown" size={14} />
-          </button>
-        </div>
-      )}
-      <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
-        <Icon name="edit" size={17} />
-      </button>
-      <button className={styles.itemDelete} onClick={() => onDelete(item.id)} aria-label={`Eliminar ${item.name}`}>
-        <Icon name="close" size={17} />
-      </button>
+        </button>
+      </div>
     </li>
   )
 })
