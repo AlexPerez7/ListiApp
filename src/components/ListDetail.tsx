@@ -396,8 +396,6 @@ const ItemRow = memo(function ItemRow({
 
   const { offset: swipeOffset, handlers: swipeHandlers } = useSwipeToDelete(() => onDelete(item.id))
 
-  const category = item.categoryId ? categories.find((c) => c.id === item.categoryId) : undefined
-
   function startEditing() {
     setNameDraft(item.name)
     setQuantityDraft(item.quantity ?? '')
@@ -546,14 +544,14 @@ const ItemRow = memo(function ItemRow({
         >
           {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
         </button>
-        {(item.imageUrl || category) && (
+        {item.imageUrl && (
           <button
             type="button"
             className={styles.itemThumb}
-            onClick={item.imageUrl ? () => setLightboxOpen(true) : () => onToggle(item.id)}
-            aria-label={item.imageUrl ? `Ver foto de ${item.name}` : undefined}
+            onClick={() => setLightboxOpen(true)}
+            aria-label={`Ver foto de ${item.name}`}
           >
-            {item.imageUrl ? <img src={item.imageUrl} alt="" className={styles.itemThumbImg} /> : category?.icon}
+            <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
           </button>
         )}
         <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
