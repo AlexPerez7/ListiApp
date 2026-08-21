@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { deleteItemImage } from '../lib/imageUpload'
+import { lookupProductPhoto } from '../lib/productPhotos'
 import type { BackupPayload } from '../lib/backup'
 import type { Category, Item, ShoppingList } from '../types'
 
@@ -296,19 +297,32 @@ export function useShoppingLists(session: Session | null) {
       prev.map((list) => (list.id === listId ? { ...list, items: [...list.items, newItem] } : list)),
     )
 
-    supabase
-      .from('items')
-      .insert({
-        id,
-        list_id: listId,
-        name,
-        quantity: trimmedQuantity ?? null,
-        category_id: categoryId ?? null,
-        position: newItem.position,
-      })
-      .then(({ error }) => {
-        if (error) console.error('Error al agregar ítem:', error.message)
-      })
+    lookupProductPhoto(name).then((imageUrl) => {
+      if (imageUrl) {
+        setLists((prev) =>
+          prev.map((list) =>
+            list.id === listId
+              ? { ...list, items: list.items.map((item) => (item.id === id ? { ...item, imageUrl } : item)) }
+              : list,
+          ),
+        )
+      }
+
+      supabase
+        .from('items')
+        .insert({
+          id,
+          list_id: listId,
+          name,
+          quantity: trimmedQuantity ?? null,
+          category_id: categoryId ?? null,
+          image_url: imageUrl ?? null,
+          position: newItem.position,
+        })
+        .then(({ error }) => {
+          if (error) console.error('Error al agregar ítem:', error.message)
+        })
+    })
   }
 
   function updateItem(
