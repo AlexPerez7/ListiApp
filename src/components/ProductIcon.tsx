@@ -408,7 +408,12 @@ export function ProductIcon({ iconKey, size = 20, className }: ProductIconProps)
   if (!icon) return null
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden="true">
-      {icon}
+      {/* Contorno parejo tipo emoji: las formas sin stroke propio heredan este
+          borde oscuro; las que ya definen su propio stroke (detalles internos)
+          lo conservan sin cambios. */}
+      <g stroke="rgba(30, 20, 10, 0.35)" strokeWidth="0.9" strokeLinejoin="round" strokeLinecap="round">
+        {icon}
+      </g>
     </svg>
   )
 }
