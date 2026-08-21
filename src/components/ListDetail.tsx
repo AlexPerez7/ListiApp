@@ -433,7 +433,6 @@ const ItemRow = memo(function ItemRow({
   const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
-  const [lightboxOpen, setLightboxOpen] = useState(false)
   const catalogEmoji = useMemo(() => getCatalogEmoji(item.name), [item.name])
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -606,21 +605,24 @@ const ItemRow = memo(function ItemRow({
             <Icon name="grip" size={16} />
           </button>
         )}
-        {item.imageUrl ? (
-          <button
-            type="button"
-            className={styles.itemThumb}
-            onClick={() => setLightboxOpen(true)}
-            aria-label={`Ver foto de ${item.name}`}
+        {(item.imageUrl || catalogEmoji) && (
+          <label
+            className={`${styles.itemThumb} ${uploadingImage ? styles.itemThumbUploading : ''}`}
+            aria-label={item.imageUrl ? `Cambiar foto de ${item.name}` : `Agregar foto a ${item.name}`}
           >
-            <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
-          </button>
-        ) : (
-          catalogEmoji && (
-            <span className={styles.itemThumb} aria-hidden="true">
-              {catalogEmoji}
-            </span>
-          )
+            {item.imageUrl ? (
+              <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
+            ) : (
+              <span aria-hidden="true">{catalogEmoji}</span>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              disabled={uploadingImage}
+              hidden
+            />
+          </label>
         )}
         <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
           <span className={styles.itemName}>{item.name}</span>
@@ -640,11 +642,7 @@ const ItemRow = memo(function ItemRow({
           {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
         </button>
       </div>
-      {lightboxOpen && item.imageUrl && (
-        <div className={styles.lightboxOverlay} onClick={() => setLightboxOpen(false)}>
-          <img src={item.imageUrl} alt="" className={styles.lightboxImg} />
-        </div>
-      )}
+      {imageError && <p className={styles.itemImageError}>{imageError}</p>}
     </li>
   )
 })
