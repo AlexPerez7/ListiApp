@@ -409,7 +409,7 @@
   background: var(--color-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-  padding: 4px 4px 4px 10px;
+  padding: 4px 10px 4px 4px;
   touch-action: pan-y;
   transition: background-color 0.15s ease, transform 0.12s ease;
 }

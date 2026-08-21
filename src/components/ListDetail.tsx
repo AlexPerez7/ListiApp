@@ -604,13 +604,6 @@ const ItemRow = memo(function ItemRow({
             <Icon name="grip" size={16} />
           </button>
         )}
-        <button
-          className={styles.checkbox}
-          onClick={() => onToggle(item.id)}
-          aria-label={item.done ? 'Marcar como pendiente' : 'Marcar como comprado'}
-        >
-          {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
-        </button>
         {item.imageUrl && (
           <button
             type="button"
@@ -630,6 +623,13 @@ const ItemRow = memo(function ItemRow({
         </button>
         <button className={styles.itemEdit} onClick={startEditing} aria-label={`Editar ${item.name}`}>
           <Icon name="edit" size={17} />
+        </button>
+        <button
+          className={styles.checkbox}
+          onClick={() => onToggle(item.id)}
+          aria-label={item.done ? 'Marcar como pendiente' : 'Marcar como comprado'}
+        >
+          {item.done && <Icon name="check" size={16} className={styles.checkmark} />}
         </button>
       </div>
       {lightboxOpen && item.imageUrl && (
