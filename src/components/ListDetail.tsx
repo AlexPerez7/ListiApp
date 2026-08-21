@@ -20,7 +20,8 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
-import { getCatalogEmoji } from '../lib/productCatalog'
+import { getCatalogIcon } from '../lib/productCatalog'
+import { ProductIcon } from './ProductIcon'
 import { describeUploadError } from '../lib/imageUpload'
 import { useSwipeToDelete } from '../hooks/useSwipeToDelete'
 import { hasSeenSwipeHint, markSwipeHintSeen } from '../lib/swipeHint'
@@ -433,7 +434,7 @@ const ItemRow = memo(function ItemRow({
   const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
-  const catalogEmoji = useMemo(() => getCatalogEmoji(item.name), [item.name])
+  const catalogIcon = useMemo(() => getCatalogIcon(item.name), [item.name])
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -605,7 +606,7 @@ const ItemRow = memo(function ItemRow({
             <Icon name="grip" size={16} />
           </button>
         )}
-        {(item.imageUrl || catalogEmoji) && (
+        {(item.imageUrl || catalogIcon) && (
           <label
             className={`${styles.itemThumb} ${uploadingImage ? styles.itemThumbUploading : ''}`}
             aria-label={item.imageUrl ? `Cambiar foto de ${item.name}` : `Agregar foto a ${item.name}`}
@@ -613,7 +614,7 @@ const ItemRow = memo(function ItemRow({
             {item.imageUrl ? (
               <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
             ) : (
-              <span aria-hidden="true">{catalogEmoji}</span>
+              <ProductIcon iconKey={catalogIcon!} size={20} />
             )}
             <input
               type="file"
