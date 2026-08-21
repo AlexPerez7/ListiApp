@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
+import { deleteItemImage } from '../lib/imageUpload'
 import type { Item, ShoppingList } from '../types'
 
 const LISTS_LIMIT = 200
@@ -424,6 +425,9 @@ export function useShoppingLists(session: Session | null) {
   }
 
   function setItemImage(listId: string, itemId: string, imageUrl: string | undefined) {
+    const previousImageUrl = lists.find((list) => list.id === listId)?.items.find((item) => item.id === itemId)
+      ?.imageUrl
+
     setLists((prev) =>
       prev.map((list) =>
         list.id === listId
@@ -437,7 +441,13 @@ export function useShoppingLists(session: Session | null) {
       .update({ image_url: imageUrl ?? null })
       .eq('id', itemId)
       .then(({ error }) => {
-        if (error) console.error('Error al guardar la foto del ítem:', error.message)
+        if (error) {
+          console.error('Error al guardar la foto del ítem:', error.message)
+          return
+        }
+        if (!imageUrl && previousImageUrl && session?.user.id) {
+          deleteItemImage(session.user.id, itemId, previousImageUrl)
+        }
       })
   }
 

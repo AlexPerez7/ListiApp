@@ -1,4 +1,10 @@
--- Ejecutar en Supabase: Project > SQL Editor > New query > pegar todo > Run
+-- Historial de cómo se llegó al schema actual (se fue pegando a mano en el
+-- SQL Editor de Supabase, bloque por bloque, a medida que se agregaban
+-- features). De acá en adelante los cambios de schema se hacen con el
+-- Supabase CLI (`supabase migration new <nombre>` + `supabase db push`,
+-- ver supabase/migrations/) en vez de agregar bloques nuevos acá, para que
+-- schema.sql/producción no se desincronicen como pasó con las policies de
+-- Storage. Ejecutar en Supabase: Project > SQL Editor > New query > pegar todo > Run
 
 create extension if not exists pgcrypto;
 
@@ -77,8 +83,8 @@ alter publication supabase_realtime add table public.categories;
 -- Bucket de Storage para las fotos de los ítems. Público de solo lectura:
 -- cualquiera con la URL puede ver la imagen, pero solo el dueño puede
 -- subir/reemplazar/borrar sus propias fotos (carpeta = su user_id).
-insert into storage.buckets (id, name, public)
-values ('item-images', 'item-images', true)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('item-images', 'item-images', true, 5242880, array['image/jpeg'])
 on conflict (id) do nothing;
 
 -- La policy de select es necesaria aunque el bucket sea publico: al subir
@@ -208,3 +214,11 @@ create policy "Users can delete their own item images"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'item-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+-- Migración: límite de tamaño (5MB) y mime type permitido (jpeg, el único
+-- que sube la app tras comprimir) en el bucket de fotos de ítems, en vez de
+-- depender solo de la compresión del lado del cliente. Corré este bloque
+-- solo si tu bucket item-images no tiene estos límites — es idempotente.
+update storage.buckets
+set file_size_limit = 5242880, allowed_mime_types = array['image/jpeg']
+where id = 'item-images';

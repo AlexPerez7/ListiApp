@@ -58,3 +58,50 @@ export async function uploadItemImage(userId: string, itemId: string, file: File
   const { data } = supabase.storage.from('item-images').getPublicUrl(path)
   return `${data.publicUrl}?v=${Date.now()}`
 }
+
+// Borra la foto de un item de Storage, pero solo si el item es el dueño del
+// archivo (no una copia duplicada de otro item) y ningún otro item la sigue
+// usando (duplicateList copia el image_url de items ya duplicados sin subir
+// un archivo propio, así que varios items pueden apuntar al mismo path).
+export async function deleteItemImage(userId: string, itemId: string, imageUrl: string | undefined) {
+  if (!imageUrl) return
+  const path = `${userId}/${itemId}.jpg`
+  if (!imageUrl.includes(path)) return
+
+  const { count, error: countError } = await supabase
+    .from('items')
+    .select('id', { count: 'exact', head: true })
+    .neq('id', itemId)
+    .like('image_url', `%${path}%`)
+
+  if (countError) {
+    console.error('deleteItemImage count error', { path, error: countError })
+    return
+  }
+  if (count && count > 0) return
+
+  const { error } = await supabase.storage.from('item-images').remove([path])
+  if (error) console.error('deleteItemImage error', { path, error })
+}
+
+export function describeUploadError(err: unknown): string {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return 'Sin conexión a internet. Probá de nuevo cuando vuelvas a estar online.'
+  }
+
+  const message = err instanceof Error ? err.message : String(err)
+
+  if (/exceeded the maximum allowed size|file size|too large|payload too large/i.test(message)) {
+    return 'La imagen es muy pesada.'
+  }
+  if (/mime type|not supported|invalid.*type/i.test(message)) {
+    return 'Formato de imagen no soportado. Probá con otra foto.'
+  }
+  if (/row-level security|permission|unauthorized/i.test(message)) {
+    return 'No tenés permiso para subir esta foto. Probá cerrar sesión y volver a entrar.'
+  }
+  if (/failed to fetch|network/i.test(message)) {
+    return 'No se pudo conectar. Revisá tu conexión e intentá de nuevo.'
+  }
+  return 'No se pudo subir la foto. Intentá de nuevo.'
+}

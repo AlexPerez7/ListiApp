@@ -4,7 +4,7 @@ import { supabase } from './lib/supabaseClient'
 import { useShoppingLists } from './hooks/useShoppingLists'
 import { useCategories } from './hooks/useCategories'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
-import { uploadItemImage } from './lib/imageUpload'
+import { uploadItemImage, deleteItemImage } from './lib/imageUpload'
 import { Home } from './components/Home'
 import { Categories } from './components/Categories'
 import { ListDetail } from './components/ListDetail'
@@ -71,30 +71,51 @@ function App() {
     deleteCategory,
   } = useCategories(session)
 
-  function showUndoToast(message: string, onUndo: () => void) {
+  function showUndoToast(message: string, onUndo: () => void, onExpire?: () => void) {
     window.clearTimeout(toastTimeoutRef.current)
     const id = Date.now()
     setToast({ id, message, onUndo })
     toastTimeoutRef.current = window.setTimeout(() => {
       setToast((current) => (current?.id === id ? null : current))
+      onExpire?.()
     }, UNDO_TIMEOUT_MS)
+  }
+
+  function handleUndoClick() {
+    window.clearTimeout(toastTimeoutRef.current)
+    toast?.onUndo()
   }
 
   function handleDeleteItem(list: ShoppingList, item: Item) {
     deleteItem(list.id, item.id)
-    showUndoToast(`"${item.name}" eliminado`, () => {
-      restoreItem(list.id, item)
-      setToast(null)
-    })
+    showUndoToast(
+      `"${item.name}" eliminado`,
+      () => {
+        restoreItem(list.id, item)
+        setToast(null)
+      },
+      () => {
+        if (session && item.imageUrl) deleteItemImage(session.user.id, item.id, item.imageUrl)
+      },
+    )
   }
 
   function handleDeleteList(list: ShoppingList) {
     deleteList(list.id)
     setSelectedListId(null)
-    showUndoToast(`Lista "${list.name}" eliminada`, () => {
-      restoreList(list)
-      setToast(null)
-    })
+    showUndoToast(
+      `Lista "${list.name}" eliminada`,
+      () => {
+        restoreList(list)
+        setToast(null)
+      },
+      () => {
+        if (!session) return
+        for (const item of list.items) {
+          if (item.imageUrl) deleteItemImage(session.user.id, item.id, item.imageUrl)
+        }
+      },
+    )
   }
 
   async function handleUploadItemImage(listId: string, itemId: string, file: File) {
@@ -145,7 +166,7 @@ function App() {
           onUpdateListName={(name) => updateListName(selectedList.id, name)}
           onDeleteList={() => handleDeleteList(selectedList)}
         />
-        {toast && <Toast message={toast.message} actionLabel="Deshacer" onAction={toast.onUndo} />}
+        {toast && <Toast message={toast.message} actionLabel="Deshacer" onAction={handleUndoClick} />}
       </>
     )
   }
@@ -181,7 +202,7 @@ function App() {
 
       <TabBar active={activeTab} onChange={setActiveTab} />
 
-      {toast && <Toast message={toast.message} actionLabel="Deshacer" onAction={toast.onUndo} />}
+      {toast && <Toast message={toast.message} actionLabel="Deshacer" onAction={handleUndoClick} />}
     </>
   )
 }

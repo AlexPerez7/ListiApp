@@ -1,6 +1,7 @@
 import { memo, useCallback, useMemo, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
+import { describeUploadError } from '../lib/imageUpload'
 import { Icon } from './Icon'
 import styles from './ListDetail.module.css'
 
@@ -374,7 +375,7 @@ const ItemRow = memo(function ItemRow({
     try {
       await onUploadImage(item.id, file)
     } catch (err) {
-      setImageError(err instanceof Error ? err.message : 'No se pudo subir la foto')
+      setImageError(describeUploadError(err))
     } finally {
       setUploadingImage(false)
     }
