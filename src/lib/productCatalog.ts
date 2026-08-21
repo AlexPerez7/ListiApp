@@ -134,3 +134,5 @@ export function normalizeProductName(name: string): string {
 export function getCatalogIcon(name: string): string | undefined {
   return CATALOG[normalizeProductName(name)]
 }
+
+export const PRODUCT_ICON_KEYS = [...new Set(Object.values(CATALOG))].sort()

@@ -70,6 +70,7 @@ function App() {
     reorderItems,
     toggleItem,
     setItemImage,
+    setItemIcon,
     deleteItem,
     updateListName,
     clearCompleted,
@@ -205,6 +206,7 @@ function App() {
           onReorderItems={(orderedItemIds) => reorderItems(selectedList.id, orderedItemIds)}
           onUploadItemImage={(itemId, file) => handleUploadItemImage(selectedList.id, itemId, file)}
           onRemoveItemImage={(itemId) => setItemImage(selectedList.id, itemId, undefined)}
+          onChooseItemIcon={(itemId, iconKey) => setItemIcon(selectedList.id, itemId, iconKey)}
           onClearCompleted={() => clearCompleted(selectedList.id)}
           onUpdateListName={(name) => updateListName(selectedList.id, name)}
           onDeleteList={() => handleDeleteList(selectedList)}

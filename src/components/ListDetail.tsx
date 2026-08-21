@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -20,7 +21,7 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
-import { getCatalogIcon } from '../lib/productCatalog'
+import { getCatalogIcon, PRODUCT_ICON_KEYS } from '../lib/productCatalog'
 import { ProductIcon } from './ProductIcon'
 import { describeUploadError } from '../lib/imageUpload'
 import { useSwipeToDelete } from '../hooks/useSwipeToDelete'
@@ -39,6 +40,7 @@ interface ListDetailProps {
   onReorderItems: (orderedItemIds: string[]) => void
   onUploadItemImage: (itemId: string, file: File) => Promise<void>
   onRemoveItemImage: (itemId: string) => void
+  onChooseItemIcon: (itemId: string, iconKey: string | undefined) => void
   onClearCompleted: () => void
   onUpdateListName: (name: string) => void
   onDeleteList: () => void
@@ -90,6 +92,7 @@ export function ListDetail({
   onReorderItems,
   onUploadItemImage,
   onRemoveItemImage,
+  onChooseItemIcon,
   onClearCompleted,
   onUpdateListName,
   onDeleteList,
@@ -300,6 +303,7 @@ export function ListDetail({
                         onSave={handleSave}
                         onUploadImage={onUploadItemImage}
                         onRemoveImage={onRemoveItemImage}
+                        onChooseIcon={onChooseItemIcon}
                         showSwipeHint={showSwipeHint && item.id === firstPendingItemId}
                       />
                     ))}
@@ -332,6 +336,7 @@ export function ListDetail({
                       onSave={handleSave}
                       onUploadImage={onUploadItemImage}
                       onRemoveImage={onRemoveItemImage}
+                      onChooseIcon={onChooseItemIcon}
                     />
                   ))}
                 </ul>
@@ -413,6 +418,7 @@ interface ItemRowProps {
   onSave: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
   onUploadImage: (itemId: string, file: File) => Promise<void>
   onRemoveImage: (itemId: string) => void
+  onChooseIcon: (itemId: string, iconKey: string | undefined) => void
   showSwipeHint?: boolean
 }
 
@@ -425,6 +431,7 @@ const ItemRow = memo(function ItemRow({
   onSave,
   onUploadImage,
   onRemoveImage,
+  onChooseIcon,
   showSwipeHint,
 }: ItemRowProps) {
   const [editing, setEditing] = useState(false)
@@ -434,7 +441,9 @@ const ItemRow = memo(function ItemRow({
   const [priceDraft, setPriceDraft] = useState(item.price != null ? String(item.price) : '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false)
   const catalogIcon = useMemo(() => getCatalogIcon(item.name), [item.name])
+  const displayIcon = item.iconKey ?? catalogIcon
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -483,6 +492,18 @@ const ItemRow = memo(function ItemRow({
       Number.isFinite(parsedPrice) ? parsedPrice : undefined,
     )
     setEditing(false)
+  }
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function openFilePicker() {
+    setPhotoSheetOpen(false)
+    fileInputRef.current?.click()
+  }
+
+  function chooseIcon(iconKey: string) {
+    onChooseIcon(item.id, iconKey)
+    setPhotoSheetOpen(false)
   }
 
   async function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
@@ -606,24 +627,20 @@ const ItemRow = memo(function ItemRow({
             <Icon name="grip" size={16} />
           </button>
         )}
-        {(item.imageUrl || catalogIcon) && (
-          <label
+        {(item.imageUrl || displayIcon) && (
+          <button
+            type="button"
             className={`${styles.itemThumb} ${uploadingImage ? styles.itemThumbUploading : ''}`}
-            aria-label={item.imageUrl ? `Cambiar foto de ${item.name}` : `Agregar foto a ${item.name}`}
+            onClick={() => setPhotoSheetOpen(true)}
+            disabled={uploadingImage}
+            aria-label={`Cambiar imagen de ${item.name}`}
           >
             {item.imageUrl ? (
               <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
             ) : (
-              <ProductIcon iconKey={catalogIcon!} size={20} />
+              <ProductIcon iconKey={displayIcon!} size={20} />
             )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              disabled={uploadingImage}
-              hidden
-            />
-          </label>
+          </button>
         )}
         <button className={styles.itemMain} onClick={() => onToggle(item.id)}>
           <span className={styles.itemName}>{item.name}</span>
@@ -644,6 +661,52 @@ const ItemRow = memo(function ItemRow({
         </button>
       </div>
       {imageError && <p className={styles.itemImageError}>{imageError}</p>}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+        disabled={uploadingImage}
+        hidden
+      />
+      {photoSheetOpen && (
+        <div className={styles.sheetOverlay} onClick={() => setPhotoSheetOpen(false)}>
+          <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.sheetHandle} />
+            <h2 className={styles.sheetTitle}>Imagen de {item.name}</h2>
+            <button type="button" className={styles.sheetUploadButton} onClick={openFilePicker}>
+              <Icon name="upload" size={16} />
+              Subir una foto
+            </button>
+            {item.imageUrl && (
+              <button
+                type="button"
+                className={styles.sheetRemovePhotoButton}
+                onClick={() => {
+                  onRemoveImage(item.id)
+                  setPhotoSheetOpen(false)
+                }}
+              >
+                Quitar foto
+              </button>
+            )}
+            <p className={styles.sheetIconLabel}>O elige un ícono</p>
+            <div className={styles.iconGrid}>
+              {PRODUCT_ICON_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`${styles.iconGridOption} ${key === item.iconKey ? styles.iconGridOptionSelected : ''}`}
+                  onClick={() => chooseIcon(key)}
+                  aria-label={key}
+                >
+                  <ProductIcon iconKey={key} size={22} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </li>
   )
 })
