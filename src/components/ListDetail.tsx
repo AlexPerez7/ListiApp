@@ -349,6 +349,7 @@ export function ListDetail({
         <div className={styles.sheetOverlay} onClick={() => setAddSheetOpen(false)}>
           <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
             <div className={styles.sheetHandle} />
+            <h2 className={styles.sheetTitle}>Nuevo ítem</h2>
             <form className={styles.sheetForm} onSubmit={handleSubmit}>
               <div className={styles.formRow}>
                 <input
@@ -389,6 +390,7 @@ export function ListDetail({
                   Cancelar
                 </button>
                 <button className={styles.sheetAddButton} type="submit" disabled={!name.trim()}>
+                  <Icon name="plus" size={16} />
                   Agregar
                 </button>
               </div>
