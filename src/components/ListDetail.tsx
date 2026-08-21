@@ -100,8 +100,16 @@ export function ListDetail({
   const [titleDraft, setTitleDraft] = useState(list.name)
   const [shareStatus, setShareStatus] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [addSheetOpen, setAddSheetOpen] = useState(false)
 
   const categoriesById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
+
+  function openAddSheet() {
+    setName('')
+    setQuantity('')
+    setCategoryId('')
+    setAddSheetOpen(true)
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -110,6 +118,7 @@ export function ListDetail({
     onAddItem(trimmed, quantity, categoryId || undefined)
     setName('')
     setQuantity('')
+    setAddSheetOpen(false)
   }
 
   const filteredItems = useMemo(() => {
@@ -241,41 +250,6 @@ export function ListDetail({
 
       {shareStatus && <p className={styles.shareStatus}>{shareStatus}</p>}
 
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <div className={styles.formRow}>
-          <input
-            className={styles.inputName}
-            type="text"
-            placeholder="Ítem (ej: Leche)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            className={styles.inputQty}
-            type="text"
-            placeholder="Cant."
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-          />
-          <button className={styles.addButton} type="submit" disabled={!name.trim()} aria-label="Agregar ítem">
-            <Icon name="plus" size={22} />
-          </button>
-        </div>
-        <select
-          className={styles.categorySelect}
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          aria-label="Categoría del ítem"
-        >
-          <option value="">Sin categoría</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.icon} {c.name}
-            </option>
-          ))}
-        </select>
-      </form>
-
       {list.items.length > 3 && (
         <input
           className={styles.searchInput}
@@ -290,7 +264,7 @@ export function ListDetail({
       {list.items.length === 0 ? (
         <div className={styles.empty}>
           <Icon name="cart" size={40} className={styles.emptyIcon} />
-          <p>Agrega tu primer ítem arriba.</p>
+          <p>Agrega tu primer ítem con el botón +.</p>
         </div>
       ) : filteredItems.length === 0 ? (
         <div className={styles.empty}>
@@ -363,6 +337,64 @@ export function ListDetail({
             )}
           </div>
         </DndContext>
+      )}
+
+      <div className={styles.fabLayer}>
+        <button className={styles.fab} onClick={openAddSheet} aria-label="Agregar ítem">
+          <Icon name="plus" size={26} />
+        </button>
+      </div>
+
+      {addSheetOpen && (
+        <div className={styles.sheetOverlay} onClick={() => setAddSheetOpen(false)}>
+          <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.sheetHandle} />
+            <form className={styles.sheetForm} onSubmit={handleSubmit}>
+              <div className={styles.formRow}>
+                <input
+                  className={styles.inputName}
+                  type="text"
+                  placeholder="Ítem (ej: Leche)"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus
+                />
+                <input
+                  className={styles.inputQty}
+                  type="text"
+                  placeholder="Cant."
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                />
+              </div>
+              <select
+                className={styles.categorySelect}
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                aria-label="Categoría del ítem"
+              >
+                <option value="">Sin categoría</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                  </option>
+                ))}
+              </select>
+              <div className={styles.sheetActions}>
+                <button
+                  className={styles.sheetCancelButton}
+                  type="button"
+                  onClick={() => setAddSheetOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button className={styles.sheetAddButton} type="submit" disabled={!name.trim()}>
+                  Agregar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )
