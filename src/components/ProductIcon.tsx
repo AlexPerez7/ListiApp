@@ -2,7 +2,15 @@
 // (ver lib/productCatalog.ts), en reemplazo de los emojis genéricos. Un
 // ícono puede representar varios productos parecidos (ej: "meat" cubre
 // carne molida, bife y milanesa).
+//
+// Algunas claves tienen además una foto real genérica (ver PHOTOS más abajo);
+// cuando existe, se muestra en vez del dibujo.
 import type { ReactElement } from 'react'
+import appleImg from '../assets/products/apple.jpg'
+
+const PHOTOS: Record<string, string> = {
+  apple: appleImg,
+}
 
 const ICONS: Record<string, ReactElement> = {
   apple: (
@@ -404,6 +412,18 @@ interface ProductIconProps {
 }
 
 export function ProductIcon({ iconKey, size = 20, className }: ProductIconProps) {
+  const photo = PHOTOS[iconKey]
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt=""
+        className={className}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }}
+      />
+    )
+  }
+
   const icon = ICONS[iconKey]
   if (!icon) return null
   return (
