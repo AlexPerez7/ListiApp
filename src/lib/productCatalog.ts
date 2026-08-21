@@ -53,8 +53,10 @@ const CATALOG: Record<string, string> = {
   atun: 'fish',
   jamon: 'ham',
   jamón: 'ham',
-  hamburguesa: 'burger',
-  hamburguesas: 'burger',
+  hamburguesa: 'pattyRaw',
+  hamburguesas: 'pattyRaw',
+  medallon: 'pattyRaw',
+  medallones: 'pattyRaw',
   salchicha: 'sausage',
   salchichas: 'sausage',
 

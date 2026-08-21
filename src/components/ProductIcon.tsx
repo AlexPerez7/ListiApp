@@ -114,13 +114,19 @@ const ICONS: Record<string, ReactElement> = {
   ),
   leafy: (
     <>
-      <path d="M12 20c-4.5 0-7.5-3.2-7.5-7.3 0-2.4 1-4.4 2.6-5.7 1 2 2.8 3.2 4.9 3.2s3.9-1.2 4.9-3.2c1.6 1.3 2.6 3.3 2.6 5.7 0 4.1-3 7.3-7.5 7.3Z" fill="#6faa3f" />
       <path
-        d="M12 20V10M8.5 12.5c1 2 1 5 0 7M15.5 12.5c-1 2-1 5 0 7"
-        stroke="#4c7a2b"
-        strokeWidth="0.8"
-        fill="none"
+        d="M7.5 19c-2.6-1.1-4.1-3.9-3.3-7.1.6-2.3 2.2-3.9 3.9-4.4.5 1.9.5 4.1 0 6-.5 2.2-1.1 4.1-.6 5.5Z"
+        fill="#7fb84a"
       />
+      <path
+        d="M16.5 19c2.6-1.1 4.1-3.9 3.3-7.1-.6-2.3-2.2-3.9-3.9-4.4-.5 1.9-.5 4.1 0 6 .5 2.2 1.1 4.1.6 5.5Z"
+        fill="#7fb84a"
+      />
+      <path
+        d="M12 20c-2.2 0-3.8-3.2-3.3-7.2.3-2.2 1.6-4.4 3.3-5.5 1.7 1.1 3 3.3 3.3 5.5.5 4-1.1 7.2-3.3 7.2Z"
+        fill="#6faa3f"
+      />
+      <path d="M12 19V9" stroke="#4c7a2b" strokeWidth="0.8" />
     </>
   ),
   cucumber: (
@@ -164,14 +170,11 @@ const ICONS: Record<string, ReactElement> = {
   ),
   meat: (
     <>
-      <path d="M5 14.5c0-4 3.5-7 8-7s7.5 2.5 7.5 5.5c0 2.2-2 3.3-4.5 3-1 1.7-3 3-5.5 3-3 0-5.5-1.9-5.5-4.5Z" fill="#d2665a" />
       <path
-        d="M8.5 12c1.2 1.3 1.2 3.1 0 4.6M13.5 9c1.5 1.2 1.7 3.3.5 5"
-        stroke="#f2b9ae"
-        strokeWidth="1"
-        fill="none"
-        strokeLinecap="round"
+        d="M6.5 15.2c-1.3-3 .3-6 3.3-7 .8-2.1 3-2.8 4.6-1.4 1.6 1.4 1.2 3.6-.7 4.8 2 .3 3.3 2.1 2.6 4.2-1.1 3.3-5 4-7.3 2.6-1.6-1-2.2-2-2.5-3.2Z"
+        fill="#d2665a"
       />
+      <circle cx="15.8" cy="10.3" r="1.5" fill="none" stroke="#f2b9ae" strokeWidth="1.1" />
     </>
   ),
   chicken: (
@@ -203,12 +206,13 @@ const ICONS: Record<string, ReactElement> = {
       <circle cx="12" cy="13" r="7" fill="none" stroke="#d4707c" strokeWidth="1" />
     </>
   ),
-  burger: (
+  pattyRaw: (
     <>
-      <path d="M5 11.5c0-2.5 3.1-4.5 7-4.5s7 2 7 4.5Z" fill="#e0a343" />
-      <rect x="5" y="12.5" width="14" height="2" rx="1" fill="#7fae4a" />
-      <rect x="5" y="15" width="14" height="2.3" rx="1.1" fill="#c97e40" />
-      <path d="M5.5 18.5c0 1.1 2.9 2 6.5 2s6.5-.9 6.5-2Z" fill="#e0a343" />
+      <ellipse cx="12" cy="17.3" rx="6.8" ry="2.3" fill="#a53a30" />
+      <ellipse cx="12" cy="14.7" rx="6.8" ry="2.3" fill="#c14a3c" />
+      <ellipse cx="12" cy="12.1" rx="6.8" ry="2.3" fill="#d2665a" />
+      <ellipse cx="9.2" cy="11.2" rx="1.6" ry="0.55" fill="#f2b9ae" opacity="0.6" />
+      <ellipse cx="14" cy="11.6" rx="1.1" ry="0.4" fill="#f2b9ae" opacity="0.5" />
     </>
   ),
   sausage: (
@@ -241,9 +245,9 @@ const ICONS: Record<string, ReactElement> = {
   ),
   butter: (
     <>
-      <path d="M4.5 9h4.5l1-2h4l1 2h4.5v2h-15Z" fill="#e0bd2e" />
-      <rect x="5.5" y="11" width="13" height="6.5" rx="1" fill="#f7d95c" stroke="#e0bd2e" strokeWidth="0.6" />
-      <path d="M4.5 17.5h4.5l1 2h4l1-2h4.5v-2h-15Z" fill="#e0bd2e" />
+      <rect x="8.5" y="7" width="10" height="11" rx="1" fill="#f7d95c" stroke="#e0bd2e" strokeWidth="0.6" />
+      <path d="M8.5 7 4 5v14l4.5-2Z" fill="#fdf6e0" stroke="#e6dcc0" strokeWidth="0.6" />
+      <path d="M4.8 6.3 8.1 7.8M4.8 16.3l3.3-1.5" stroke="#e6dcc0" strokeWidth="0.5" />
     </>
   ),
   bread: (
@@ -285,7 +289,7 @@ const ICONS: Record<string, ReactElement> = {
       <path d="M6 13.8c.2-4 3-6.8 6-6.8s5.8 2.8 6 6.8Z" fill="#f7f4ea" stroke="#e3ddc8" strokeWidth="0.5" />
       {[[9, 10.5, 30], [12, 9, -20], [14.5, 11, 15], [10.5, 12.5, -10], [13.5, 12.8, 25]].map(
         ([cx, cy, rot], i) => (
-          <rect key={i} x={cx - 1} y={cy - 0.35} width="2" height="0.7" rx="0.35" fill="#e3ddc8" transform={`rotate(${rot} ${cx} ${cy})`} />
+          <rect key={i} x={cx - 1.1} y={cy - 0.4} width="2.2" height="0.8" rx="0.4" fill="#d5cdb0" transform={`rotate(${rot} ${cx} ${cy})`} />
         ),
       )}
     </>
