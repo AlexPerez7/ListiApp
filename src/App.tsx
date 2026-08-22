@@ -5,7 +5,7 @@ import { useShoppingLists } from './hooks/useShoppingLists'
 import { useCategories } from './hooks/useCategories'
 import { useProductCatalog } from './hooks/useProductCatalog'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
-import { uploadItemImage, deleteItemImage } from './lib/imageUpload'
+import { uploadItemImage, deleteItemImage, uploadCatalogImage, deleteCatalogImage } from './lib/imageUpload'
 import { rememberProductPhoto } from './lib/productPhotos'
 import { buildItemNameHistory } from './lib/itemSuggestions'
 import { buildCatalogMap } from './lib/productCatalog'
@@ -99,6 +99,7 @@ function App() {
     createEntry: createCatalogEntry,
     updateEntry: updateCatalogEntry,
     deleteEntry: deleteCatalogEntry,
+    setEntryImage: setCatalogEntryImage,
   } = useProductCatalog(session)
 
   const itemNameHistory = useMemo(() => buildItemNameHistory(lists), [lists])
@@ -179,6 +180,29 @@ function App() {
       console.error('Error al subir la foto del ítem:', err)
       throw err
     }
+  }
+
+  async function handleUploadCatalogImage(entryId: string, file: File) {
+    if (!session) return
+    try {
+      const url = await uploadCatalogImage(session.user.id, entryId, file)
+      setCatalogEntryImage(entryId, url)
+    } catch (err) {
+      console.error('Error al subir la foto del producto:', err)
+      throw err
+    }
+  }
+
+  function handleDeleteCatalogEntry(entryId: string) {
+    const entry = productCatalog.find((e) => e.id === entryId)
+    deleteCatalogEntry(entryId)
+    if (session && entry?.imageUrl) deleteCatalogImage(session.user.id, entryId, entry.imageUrl)
+  }
+
+  function handleRemoveCatalogImage(entryId: string) {
+    const entry = productCatalog.find((e) => e.id === entryId)
+    setCatalogEntryImage(entryId, undefined)
+    if (session && entry?.imageUrl) deleteCatalogImage(session.user.id, entryId, entry.imageUrl)
   }
 
   function handleExport() {
@@ -286,7 +310,9 @@ function App() {
             loading={productCatalogLoading}
             onCreate={createCatalogEntry}
             onUpdate={updateCatalogEntry}
-            onDelete={deleteCatalogEntry}
+            onDelete={handleDeleteCatalogEntry}
+            onUploadImage={handleUploadCatalogImage}
+            onRemoveImage={handleRemoveCatalogImage}
             onConfirm={confirmAction}
           />
         ) : (

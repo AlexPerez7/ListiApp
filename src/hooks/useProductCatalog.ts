@@ -8,10 +8,11 @@ interface DbProductCatalogEntry {
   id: string
   name: string
   icon_key: string
+  image_url: string | null
 }
 
 function mapEntry(row: DbProductCatalogEntry): ProductCatalogEntry {
-  return { id: row.id, name: row.name, iconKey: row.icon_key }
+  return { id: row.id, name: row.name, iconKey: row.icon_key, imageUrl: row.image_url ?? undefined }
 }
 
 function sortEntries(entries: ProductCatalogEntry[]): ProductCatalogEntry[] {
@@ -24,7 +25,7 @@ export function useProductCatalog(session: Session | null) {
   const hasSeededRef = useRef(false)
 
   const fetchCatalog = useCallback(async () => {
-    const { data, error } = await supabase.from('product_catalog').select('id, name, icon_key')
+    const { data, error } = await supabase.from('product_catalog').select('id, name, icon_key, image_url')
 
     if (error) {
       console.error('Error al cargar el catálogo de productos:', error.message)
@@ -107,6 +108,18 @@ export function useProductCatalog(session: Session | null) {
       })
   }
 
+  function setEntryImage(entryId: string, imageUrl: string | undefined) {
+    setCatalog((prev) => sortEntries(prev.map((entry) => (entry.id === entryId ? { ...entry, imageUrl } : entry))))
+
+    supabase
+      .from('product_catalog')
+      .update({ image_url: imageUrl ?? null })
+      .eq('id', entryId)
+      .then(({ error }) => {
+        if (error) console.error('Error al editar la foto del producto:', error.message)
+      })
+  }
+
   function deleteEntry(entryId: string) {
     setCatalog((prev) => prev.filter((entry) => entry.id !== entryId))
 
@@ -119,5 +132,5 @@ export function useProductCatalog(session: Session | null) {
       })
   }
 
-  return { catalog, loading, createEntry, updateEntry, deleteEntry }
+  return { catalog, loading, createEntry, updateEntry, deleteEntry, setEntryImage }
 }

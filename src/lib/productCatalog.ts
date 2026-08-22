@@ -142,14 +142,19 @@ export function normalizeProductName(name: string): string {
     .toLowerCase()
 }
 
-export function buildCatalogMap(entries: ProductCatalogEntry[]): Map<string, string> {
-  const map = new Map<string, string>()
+export interface CatalogIcon {
+  iconKey: string
+  imageUrl?: string
+}
+
+export function buildCatalogMap(entries: ProductCatalogEntry[]): Map<string, CatalogIcon> {
+  const map = new Map<string, CatalogIcon>()
   for (const entry of entries) {
-    map.set(normalizeProductName(entry.name), entry.iconKey)
+    map.set(normalizeProductName(entry.name), { iconKey: entry.iconKey, imageUrl: entry.imageUrl })
   }
   return map
 }
 
-export function getCatalogIcon(catalog: Map<string, string>, name: string): string | undefined {
+export function getCatalogIcon(catalog: Map<string, CatalogIcon>, name: string): CatalogIcon | undefined {
   return catalog.get(normalizeProductName(name))
 }

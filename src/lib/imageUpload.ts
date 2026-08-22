@@ -89,6 +89,33 @@ export async function deleteItemImage(userId: string, itemId: string, imageUrl: 
   if (error) console.error('deleteItemImage error', { path, error })
 }
 
+export async function uploadCatalogImage(userId: string, entryId: string, file: File): Promise<string> {
+  const blob = await compressImage(file)
+  const path = `${userId}/catalog/${entryId}.jpg`
+
+  const { error } = await supabase.storage
+    .from('item-images')
+    .upload(path, blob, { contentType: 'image/jpeg', upsert: true })
+
+  if (error) {
+    console.error('uploadCatalogImage error', { path, error })
+    const detail = 'statusCode' in error ? ` [${(error as { statusCode?: string }).statusCode}]` : ''
+    throw new Error(`${error.message}${detail} (path: ${path})`)
+  }
+
+  const { data } = supabase.storage.from('item-images').getPublicUrl(path)
+  return `${data.publicUrl}?v=${Date.now()}`
+}
+
+export async function deleteCatalogImage(userId: string, entryId: string, imageUrl: string | undefined) {
+  if (!imageUrl) return
+  const path = `${userId}/catalog/${entryId}.jpg`
+  if (!imageUrl.includes(path)) return
+
+  const { error } = await supabase.storage.from('item-images').remove([path])
+  if (error) console.error('deleteCatalogImage error', { path, error })
+}
+
 export function describeUploadError(err: unknown): string {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return 'Sin conexión a internet. Intenta de nuevo cuando vuelvas a estar en línea.'

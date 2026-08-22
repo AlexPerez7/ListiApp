@@ -21,7 +21,7 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
-import { getCatalogIcon } from '../lib/productCatalog'
+import { getCatalogIcon, type CatalogIcon } from '../lib/productCatalog'
 import { ALL_ICON_KEYS } from '../lib/productIcons'
 import { matchSuggestions } from '../lib/itemSuggestions'
 import { ProductIcon } from './ProductIcon'
@@ -35,7 +35,7 @@ interface ListDetailProps {
   list: ShoppingList
   categories: Category[]
   itemNameHistory: string[]
-  productCatalog: Map<string, string>
+  productCatalog: Map<string, CatalogIcon>
   onBack: () => void
   onAddItem: (name: string, quantity?: string, categoryId?: string) => void
   onUpdateItem: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
@@ -448,7 +448,7 @@ export function ListDetail({
 interface ItemRowProps {
   item: Item
   categories: Category[]
-  productCatalog: Map<string, string>
+  productCatalog: Map<string, CatalogIcon>
   draggable: boolean
   onToggle: (itemId: string) => void
   onDelete: (itemId: string) => void
@@ -481,7 +481,8 @@ const ItemRow = memo(function ItemRow({
   const [imageError, setImageError] = useState<string | null>(null)
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false)
   const catalogIcon = useMemo(() => getCatalogIcon(productCatalog, item.name), [productCatalog, item.name])
-  const displayIcon = item.iconKey ?? catalogIcon
+  const displayImageUrl = item.iconKey ? undefined : catalogIcon?.imageUrl
+  const displayIconKey = item.iconKey ?? catalogIcon?.iconKey
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -569,8 +570,10 @@ const ItemRow = memo(function ItemRow({
     >
       {item.imageUrl ? (
         <img src={item.imageUrl} alt="" className={styles.itemThumbImg} />
-      ) : displayIcon ? (
-        <ProductIcon iconKey={displayIcon} size={20} />
+      ) : displayImageUrl ? (
+        <img src={displayImageUrl} alt="" className={styles.itemThumbImg} />
+      ) : displayIconKey ? (
+        <ProductIcon iconKey={displayIconKey} size={20} />
       ) : (
         <Icon name="cart" size={18} />
       )}
