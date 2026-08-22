@@ -2,7 +2,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   padding: 24px 16px 16px;
 }
 
@@ -21,88 +21,6 @@
   margin-top: 4px;
   font-size: 14px;
   color: var(--color-text-secondary);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: 14px;
-}
-
-.iconPicker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-height: 138px;
-  overflow-y: auto;
-  padding: 2px;
-}
-
-.iconOption {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
-}
-
-.iconOption:active {
-  transform: scale(0.92);
-}
-
-.iconOptionSelected {
-  border-color: var(--color-primary);
-  background: var(--color-done-bg);
-}
-
-.formRow {
-  display: flex;
-  gap: 8px;
-}
-
-.input {
-  flex: 1;
-  min-width: 0;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-size: 15px;
-  color: var(--color-text);
-}
-
-.input:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-
-.addButton {
-  flex-shrink: 0;
-  padding: 12px 18px;
-  border-radius: var(--radius-md);
-  border: none;
-  background: var(--color-accent);
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 14px;
-  transition: background-color 0.15s ease;
-}
-
-.addButton:active {
-  background: var(--color-accent-dark);
-}
-
-.addButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .searchInput {
@@ -138,97 +56,222 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.card {
-  display: flex;
-  align-items: stretch;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: transform 0.1s ease;
 }
 
-.card:active {
-  transform: scale(0.99);
+.row {
+  border-bottom: 1px solid var(--color-border);
 }
 
-.cardMain {
-  flex: 1;
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowButton {
+  width: 100%;
   text-align: left;
   background: none;
   border: none;
-  padding: 14px 16px;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
+  transition: background-color 0.15s ease;
 }
 
-.cardIcon {
+.rowButton:active {
+  background: var(--color-bg);
+}
+
+.rowIcon {
   flex-shrink: 0;
 }
 
-.cardName {
+.rowName {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.deleteButton {
-  width: 48px;
+.fabLayer {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: 0;
+  pointer-events: none;
+  z-index: 45;
+}
+
+.fab {
+  position: absolute;
+  right: 16px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0));
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
   border: none;
-  background: none;
-  color: var(--color-text-secondary);
+  background: var(--color-accent);
+  color: #ffffff;
+  box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  pointer-events: auto;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
-.deleteButton:active {
-  background: rgba(31, 41, 55, 0.05);
-  color: #dc2626;
+.fab:active {
+  background: var(--color-accent-dark);
+  transform: scale(0.94);
 }
 
-.editForm {
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.25);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border-radius: 20px 20px 0 0;
+  padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0));
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  padding: 14px;
+  gap: 12px;
+  animation: sheetUp 0.2s ease;
 }
 
-.editActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+@keyframes sheetUp {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-.editSaveButton,
-.editCancelButton {
-  padding: 8px 16px;
+.sheetHandle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border);
+  align-self: center;
+  margin-bottom: 4px;
+}
+
+.sheetTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.input {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.iconGridOption {
+  aspect-ratio: 1;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.iconGridOption:active {
+  transform: scale(0.94);
+}
+
+.iconGridOptionSelected {
+  border-color: var(--color-primary);
+  background: var(--color-done-bg);
+}
+
+.deleteButton {
+  padding: 10px;
   border: none;
+  background: none;
+  color: #dc2626;
   font-size: 14px;
   font-weight: 600;
 }
 
-.editSaveButton {
-  background: var(--color-primary);
+.sheetActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.sheetCancelButton,
+.sheetSaveButton {
+  flex: 1;
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sheetCancelButton {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.sheetSaveButton {
+  background: var(--color-accent);
   color: #ffffff;
 }
 
-.editSaveButton:disabled {
+.sheetSaveButton:disabled {
   opacity: 0.5;
-}
-
-.editCancelButton {
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
+  cursor: not-allowed;
 }
