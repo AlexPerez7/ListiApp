@@ -91,6 +91,14 @@
   flex-shrink: 0;
 }
 
+.rowImg {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .rowName {
   font-size: 16px;
   font-weight: 500;
@@ -205,6 +213,52 @@
 .input:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
+}
+
+.uploadButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-accent);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.uploadButton:disabled {
+  opacity: 0.6;
+}
+
+.imageError {
+  color: #dc2626;
+  font-size: 13px;
+  text-align: center;
+}
+
+.removePhotoButton {
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  align-self: center;
+}
+
+.removePhotoButton:active {
+  color: #dc2626;
+}
+
+.iconLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: 4px;
 }
 
 .iconGrid {

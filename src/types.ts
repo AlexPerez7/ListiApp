@@ -30,4 +30,5 @@ export interface ProductCatalogEntry {
   id: string
   name: string
   iconKey: string
+  imageUrl?: string
 }
