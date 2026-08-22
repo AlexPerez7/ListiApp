@@ -16,7 +16,7 @@ create index product_catalog_user_id_idx on public.product_catalog (user_id);
 alter table public.product_catalog replica identity full;
 alter table public.product_catalog enable row level security;
 
-create policy "Users can manage their own product catalog"
+create policy product_catalog_owner_policy
   on public.product_catalog
   for all
   using (auth.uid() = user_id)
