@@ -31,6 +31,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<Tab>('lists')
   const [toast, setToast] = useState<{ id: number; message: string; onUndo: () => void } | null>(null)
   const toastTimeoutRef = useRef<number | undefined>(undefined)
+  const pendingExpireRef = useRef<(() => void) | undefined>(undefined)
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme())
   const [confirmState, setConfirmState] = useState<{
     message: string
@@ -90,16 +91,24 @@ function App() {
 
   function showUndoToast(message: string, onUndo: () => void, onExpire?: () => void) {
     window.clearTimeout(toastTimeoutRef.current)
+    // El toast anterior deja de ser accionable al reemplazarlo por uno nuevo;
+    // corremos su limpieza ahora en vez de perderla (ej: borrar la foto de
+    // Storage de un ítem eliminado antes).
+    pendingExpireRef.current?.()
+    pendingExpireRef.current = onExpire
+
     const id = Date.now()
     setToast({ id, message, onUndo })
     toastTimeoutRef.current = window.setTimeout(() => {
       setToast((current) => (current?.id === id ? null : current))
+      pendingExpireRef.current = undefined
       onExpire?.()
     }, UNDO_TIMEOUT_MS)
   }
 
   function handleUndoClick() {
     window.clearTimeout(toastTimeoutRef.current)
+    pendingExpireRef.current = undefined
     toast?.onUndo()
   }
 

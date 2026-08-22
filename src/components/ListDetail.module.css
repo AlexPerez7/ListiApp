@@ -716,8 +716,24 @@
 
 .editActions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+}
+
+.editActionsRight {
+  display: flex;
+  gap: 8px;
+}
+
+.editDeleteButton {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .editSaveButton,

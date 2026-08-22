@@ -301,30 +301,39 @@ export function useShoppingLists(session: Session | null) {
       prev.map((list) => (list.id === listId ? { ...list, items: [...list.items, newItem] } : list)),
     )
 
+    supabase
+      .from('items')
+      .insert({
+        id,
+        list_id: listId,
+        name,
+        quantity: trimmedQuantity ?? null,
+        category_id: categoryId ?? null,
+        position: newItem.position,
+      })
+      .then(({ error }) => {
+        if (error) console.error('Error al agregar ítem:', error.message)
+      })
+
+    // Autocompleta la foto recordada para este producto (si hay una) aparte,
+    // sin bloquear el guardado del ítem con esa búsqueda.
     lookupProductPhoto(name).then((imageUrl) => {
-      if (imageUrl) {
-        setLists((prev) =>
-          prev.map((list) =>
-            list.id === listId
-              ? { ...list, items: list.items.map((item) => (item.id === id ? { ...item, imageUrl } : item)) }
-              : list,
-          ),
-        )
-      }
+      if (!imageUrl) return
+
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === listId
+            ? { ...list, items: list.items.map((item) => (item.id === id ? { ...item, imageUrl } : item)) }
+            : list,
+        ),
+      )
 
       supabase
         .from('items')
-        .insert({
-          id,
-          list_id: listId,
-          name,
-          quantity: trimmedQuantity ?? null,
-          category_id: categoryId ?? null,
-          image_url: imageUrl ?? null,
-          position: newItem.position,
-        })
+        .update({ image_url: imageUrl })
+        .eq('id', id)
         .then(({ error }) => {
-          if (error) console.error('Error al agregar ítem:', error.message)
+          if (error) console.error('Error al autocompletar la foto del ítem:', error.message)
         })
     })
   }
@@ -364,36 +373,6 @@ export function useShoppingLists(session: Session | null) {
       .then(({ error }) => {
         if (error) console.error('Error al editar ítem:', error.message)
       })
-  }
-
-  function swapItemPositions(listId: string, itemId: string, neighborId: string) {
-    const list = lists.find((l) => l.id === listId)
-    const item = list?.items.find((i) => i.id === itemId)
-    const neighbor = list?.items.find((i) => i.id === neighborId)
-    if (!item || !neighbor) return
-
-    setLists((prev) =>
-      prev.map((l) =>
-        l.id === listId
-          ? {
-              ...l,
-              items: l.items.map((i) => {
-                if (i.id === item.id) return { ...i, position: neighbor.position }
-                if (i.id === neighbor.id) return { ...i, position: item.position }
-                return i
-              }),
-            }
-          : l,
-      ),
-    )
-
-    Promise.all([
-      supabase.from('items').update({ position: neighbor.position }).eq('id', item.id),
-      supabase.from('items').update({ position: item.position }).eq('id', neighbor.id),
-    ]).then(([a, b]) => {
-      if (a.error) console.error('Error al reordenar ítem:', a.error.message)
-      if (b.error) console.error('Error al reordenar ítem:', b.error.message)
-    })
   }
 
   function toggleTemplate(listId: string) {
@@ -646,7 +625,6 @@ export function useShoppingLists(session: Session | null) {
     deleteList,
     addItem,
     updateItem,
-    swapItemPositions,
     reorderItems,
     toggleItem,
     setItemImage,
