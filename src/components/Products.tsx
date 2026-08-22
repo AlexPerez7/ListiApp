@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import type { ProductCatalogEntry } from '../types'
 import { ALL_ICON_KEYS } from '../lib/productIcons'
 import { ProductIcon } from './ProductIcon'
@@ -16,18 +16,11 @@ interface ProductsProps {
 }
 
 export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onConfirm }: ProductsProps) {
-  const [name, setName] = useState('')
-  const [iconKey, setIconKey] = useState(ALL_ICON_KEYS[0])
   const [query, setQuery] = useState('')
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const trimmed = name.trim()
-    if (!trimmed) return
-    onCreate(trimmed, iconKey)
-    setName('')
-    setIconKey(ALL_ICON_KEYS[0])
-  }
+  const [editingEntry, setEditingEntry] = useState<ProductCatalogEntry | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+  const [iconDraft, setIconDraft] = useState(ALL_ICON_KEYS[0])
 
   const filteredCatalog = useMemo(() => {
     const trimmed = query.trim().toLowerCase()
@@ -35,41 +28,46 @@ export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onCon
     return catalog.filter((entry) => entry.name.toLowerCase().includes(trimmed))
   }, [catalog, query])
 
+  function openCreateSheet() {
+    setEditingEntry(null)
+    setNameDraft('')
+    setIconDraft(ALL_ICON_KEYS[0])
+    setSheetOpen(true)
+  }
+
+  function openEditSheet(entry: ProductCatalogEntry) {
+    setEditingEntry(entry)
+    setNameDraft(entry.name)
+    setIconDraft(entry.iconKey)
+    setSheetOpen(true)
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const trimmed = nameDraft.trim()
+    if (!trimmed) return
+    if (editingEntry) {
+      onUpdate(editingEntry.id, trimmed, iconDraft)
+    } else {
+      onCreate(trimmed, iconDraft)
+    }
+    setSheetOpen(false)
+  }
+
+  async function handleDelete() {
+    if (!editingEntry) return
+    if (await onConfirm(`¿Eliminar "${editingEntry.name}" del catálogo de productos?`)) {
+      onDelete(editingEntry.id)
+      setSheetOpen(false)
+    }
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Productos</h1>
         <p className={styles.subtitle}>El ícono que se sugiere automáticamente al escribir un ítem</p>
       </header>
-
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <div className={styles.iconPicker}>
-          {ALL_ICON_KEYS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              className={`${styles.iconOption} ${option === iconKey ? styles.iconOptionSelected : ''}`}
-              onClick={() => setIconKey(option)}
-              aria-label={`Usar ícono ${option}`}
-              aria-pressed={option === iconKey}
-            >
-              <ProductIcon iconKey={option} size={22} />
-            </button>
-          ))}
-        </div>
-        <div className={styles.formRow}>
-          <input
-            className={styles.input}
-            type="text"
-            placeholder="Nuevo producto (ej: kiwi)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <button className={styles.addButton} type="submit" disabled={!name.trim()}>
-            Crear
-          </button>
-        </div>
-      </form>
 
       {catalog.length > 5 && (
         <input
@@ -96,89 +94,65 @@ export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onCon
       ) : (
         <ul className={styles.list}>
           {filteredCatalog.map((entry) => (
-            <ProductRow key={entry.id} entry={entry} onUpdate={onUpdate} onDelete={onDelete} onConfirm={onConfirm} />
+            <li key={entry.id} className={styles.row}>
+              <button className={styles.rowButton} onClick={() => openEditSheet(entry)}>
+                <ProductIcon iconKey={entry.iconKey} size={40} className={styles.rowIcon} />
+                <span className={styles.rowName}>{entry.name}</span>
+              </button>
+            </li>
           ))}
         </ul>
+      )}
+
+      <div className={styles.fabLayer}>
+        <button className={styles.fab} onClick={openCreateSheet} aria-label="Agregar producto">
+          <Icon name="plus" size={26} />
+        </button>
+      </div>
+
+      {sheetOpen && (
+        <div className={styles.sheetOverlay} onClick={() => setSheetOpen(false)}>
+          <form className={styles.sheet} onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+            <div className={styles.sheetHandle} />
+            <h2 className={styles.sheetTitle}>{editingEntry ? 'Editar producto' : 'Nuevo producto'}</h2>
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="Nombre del producto (ej: kiwi)"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              autoFocus
+            />
+            <div className={styles.iconGrid}>
+              {ALL_ICON_KEYS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={`${styles.iconGridOption} ${option === iconDraft ? styles.iconGridOptionSelected : ''}`}
+                  onClick={() => setIconDraft(option)}
+                  aria-label={`Usar ícono ${option}`}
+                  aria-pressed={option === iconDraft}
+                >
+                  <ProductIcon iconKey={option} size={24} />
+                </button>
+              ))}
+            </div>
+            {editingEntry && (
+              <button type="button" className={styles.deleteButton} onClick={handleDelete}>
+                Eliminar producto
+              </button>
+            )}
+            <div className={styles.sheetActions}>
+              <button type="button" className={styles.sheetCancelButton} onClick={() => setSheetOpen(false)}>
+                Cancelar
+              </button>
+              <button className={styles.sheetSaveButton} type="submit" disabled={!nameDraft.trim()}>
+                {editingEntry ? 'Guardar' : 'Crear'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   )
 }
-
-interface ProductRowProps {
-  entry: ProductCatalogEntry
-  onUpdate: (entryId: string, name: string, iconKey: string) => void
-  onDelete: (entryId: string) => void
-  onConfirm: (message: string, confirmLabel?: string) => Promise<boolean>
-}
-
-const ProductRow = memo(function ProductRow({ entry, onUpdate, onDelete, onConfirm }: ProductRowProps) {
-  const [editing, setEditing] = useState(false)
-  const [nameDraft, setNameDraft] = useState(entry.name)
-  const [iconDraft, setIconDraft] = useState(entry.iconKey)
-
-  function startEditing() {
-    setNameDraft(entry.name)
-    setIconDraft(entry.iconKey)
-    setEditing(true)
-  }
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const trimmed = nameDraft.trim()
-    if (!trimmed) return
-    onUpdate(entry.id, trimmed, iconDraft)
-    setEditing(false)
-  }
-
-  async function handleDelete() {
-    if (await onConfirm(`¿Eliminar "${entry.name}" del catálogo de productos?`)) {
-      onDelete(entry.id)
-    }
-  }
-
-  if (editing) {
-    return (
-      <li className={styles.card}>
-        <form className={styles.editForm} onSubmit={handleSubmit}>
-          <div className={styles.iconPicker}>
-            {ALL_ICON_KEYS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={`${styles.iconOption} ${option === iconDraft ? styles.iconOptionSelected : ''}`}
-                onClick={() => setIconDraft(option)}
-                aria-label={`Usar ícono ${option}`}
-                aria-pressed={option === iconDraft}
-              >
-                <ProductIcon iconKey={option} size={22} />
-              </button>
-            ))}
-          </div>
-          <div className={styles.formRow}>
-            <input className={styles.input} value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} autoFocus />
-          </div>
-          <div className={styles.editActions}>
-            <button className={styles.editCancelButton} type="button" onClick={() => setEditing(false)}>
-              Cancelar
-            </button>
-            <button className={styles.editSaveButton} type="submit" disabled={!nameDraft.trim()}>
-              Guardar
-            </button>
-          </div>
-        </form>
-      </li>
-    )
-  }
-
-  return (
-    <li className={styles.card}>
-      <button className={styles.cardMain} onClick={startEditing}>
-        <ProductIcon iconKey={entry.iconKey} size={22} className={styles.cardIcon} />
-        <span className={styles.cardName}>{entry.name}</span>
-      </button>
-      <button className={styles.deleteButton} aria-label={`Eliminar ${entry.name}`} onClick={handleDelete}>
-        <Icon name="close" size={17} />
-      </button>
-    </li>
-  )
-})
