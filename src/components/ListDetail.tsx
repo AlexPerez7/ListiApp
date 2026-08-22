@@ -489,7 +489,7 @@ const ItemRow = memo(function ItemRow({
       trimmed,
       quantityDraft,
       categoryIdDraft || undefined,
-      Number.isFinite(parsedPrice) ? parsedPrice : undefined,
+      Number.isFinite(parsedPrice) && parsedPrice! >= 0 ? parsedPrice : undefined,
     )
     setEditing(false)
   }
@@ -642,12 +642,24 @@ const ItemRow = memo(function ItemRow({
             />
           </div>
           <div className={styles.editActions}>
-            <button className={styles.editCancelButton} type="button" onClick={() => setEditing(false)}>
-              Cancelar
+            <button
+              className={styles.editDeleteButton}
+              type="button"
+              onClick={() => {
+                setEditing(false)
+                onDelete(item.id)
+              }}
+            >
+              Eliminar
             </button>
-            <button className={styles.editSaveButton} type="submit" disabled={!nameDraft.trim()}>
-              Guardar
-            </button>
+            <div className={styles.editActionsRight}>
+              <button className={styles.editCancelButton} type="button" onClick={() => setEditing(false)}>
+                Cancelar
+              </button>
+              <button className={styles.editSaveButton} type="submit" disabled={!nameDraft.trim()}>
+                Guardar
+              </button>
+            </div>
           </div>
         </form>
         {photoInputAndSheet}
