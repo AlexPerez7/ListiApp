@@ -93,6 +93,30 @@
   gap: 8px;
 }
 
+.suggestionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.suggestionChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.suggestionChip:active {
+  background: var(--color-done-bg);
+  border-color: var(--color-primary);
+}
+
 .categorySelect {
   padding: 10px 14px;
   border-radius: var(--radius-md);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
 import { useShoppingLists } from './hooks/useShoppingLists'
@@ -6,6 +6,7 @@ import { useCategories } from './hooks/useCategories'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
 import { uploadItemImage, deleteItemImage } from './lib/imageUpload'
 import { rememberProductPhoto } from './lib/productPhotos'
+import { buildItemNameHistory } from './lib/itemSuggestions'
 import { buildBackup, downloadBackup, parseBackup } from './lib/backup'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { Home } from './components/Home'
@@ -88,6 +89,8 @@ function App() {
     deleteCategory,
     reorderCategories,
   } = useCategories(session)
+
+  const itemNameHistory = useMemo(() => buildItemNameHistory(lists), [lists])
 
   function showUndoToast(message: string, onUndo: () => void, onExpire?: () => void) {
     window.clearTimeout(toastTimeoutRef.current)
@@ -202,6 +205,7 @@ function App() {
         <ListDetail
           list={selectedList}
           categories={categories}
+          itemNameHistory={itemNameHistory}
           onBack={() => setSelectedListId(null)}
           onAddItem={(name, quantity, categoryId) => addItem(selectedList.id, name, quantity, categoryId)}
           onUpdateItem={(itemId, name, quantity, categoryId, price) =>

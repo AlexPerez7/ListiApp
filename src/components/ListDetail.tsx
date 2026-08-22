@@ -22,6 +22,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
 import { getCatalogIcon, PRODUCT_ICON_KEYS } from '../lib/productCatalog'
+import { matchSuggestions } from '../lib/itemSuggestions'
 import { ProductIcon } from './ProductIcon'
 import { describeUploadError } from '../lib/imageUpload'
 import { useSwipeToDelete } from '../hooks/useSwipeToDelete'
@@ -32,6 +33,7 @@ import styles from './ListDetail.module.css'
 interface ListDetailProps {
   list: ShoppingList
   categories: Category[]
+  itemNameHistory: string[]
   onBack: () => void
   onAddItem: (name: string, quantity?: string, categoryId?: string) => void
   onUpdateItem: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
@@ -84,6 +86,7 @@ function formatPrice(value: number): string {
 export function ListDetail({
   list,
   categories,
+  itemNameHistory,
   onBack,
   onAddItem,
   onUpdateItem,
@@ -124,6 +127,19 @@ export function ListDetail({
     setName('')
     setQuantity('')
     setAddSheetOpen(false)
+  }
+
+  const pendingNameSet = useMemo(
+    () => new Set(list.items.filter((item) => !item.done).map((item) => item.name.trim().toLowerCase())),
+    [list.items],
+  )
+  const suggestions = useMemo(
+    () => matchSuggestions(itemNameHistory, name, pendingNameSet),
+    [itemNameHistory, name, pendingNameSet],
+  )
+
+  function addSuggestion(suggestionName: string) {
+    onAddItem(suggestionName, undefined, categoryId || undefined)
   }
 
   const filteredItems = useMemo(() => {
@@ -375,6 +391,21 @@ export function ListDetail({
                   onChange={(e) => setQuantity(e.target.value)}
                 />
               </div>
+              {suggestions.length > 0 && (
+                <div className={styles.suggestionRow}>
+                  {suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      className={styles.suggestionChip}
+                      onClick={() => addSuggestion(suggestion)}
+                    >
+                      <Icon name="plus" size={12} />
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
               <select
                 className={styles.categorySelect}
                 value={categoryId}
