@@ -21,7 +21,8 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from '@dnd-kit/utilities'
 import type { Category, Item, ShoppingList } from '../types'
 import { UNCATEGORIZED_LABEL } from '../lib/categories'
-import { getCatalogIcon, PRODUCT_ICON_KEYS } from '../lib/productCatalog'
+import { getCatalogIcon } from '../lib/productCatalog'
+import { ALL_ICON_KEYS } from '../lib/productIcons'
 import { matchSuggestions } from '../lib/itemSuggestions'
 import { ProductIcon } from './ProductIcon'
 import { describeUploadError } from '../lib/imageUpload'
@@ -34,6 +35,7 @@ interface ListDetailProps {
   list: ShoppingList
   categories: Category[]
   itemNameHistory: string[]
+  productCatalog: Map<string, string>
   onBack: () => void
   onAddItem: (name: string, quantity?: string, categoryId?: string) => void
   onUpdateItem: (itemId: string, name: string, quantity?: string, categoryId?: string, price?: number) => void
@@ -87,6 +89,7 @@ export function ListDetail({
   list,
   categories,
   itemNameHistory,
+  productCatalog,
   onBack,
   onAddItem,
   onUpdateItem,
@@ -313,6 +316,7 @@ export function ListDetail({
                         key={item.id}
                         item={item}
                         categories={categories}
+                        productCatalog={productCatalog}
                         draggable
                         onToggle={handleToggle}
                         onDelete={handleDelete}
@@ -346,6 +350,7 @@ export function ListDetail({
                       key={item.id}
                       item={item}
                       categories={categories}
+                      productCatalog={productCatalog}
                       draggable={false}
                       onToggle={handleToggle}
                       onDelete={handleDelete}
@@ -443,6 +448,7 @@ export function ListDetail({
 interface ItemRowProps {
   item: Item
   categories: Category[]
+  productCatalog: Map<string, string>
   draggable: boolean
   onToggle: (itemId: string) => void
   onDelete: (itemId: string) => void
@@ -456,6 +462,7 @@ interface ItemRowProps {
 const ItemRow = memo(function ItemRow({
   item,
   categories,
+  productCatalog,
   draggable,
   onToggle,
   onDelete,
@@ -473,7 +480,7 @@ const ItemRow = memo(function ItemRow({
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false)
-  const catalogIcon = useMemo(() => getCatalogIcon(item.name), [item.name])
+  const catalogIcon = useMemo(() => getCatalogIcon(productCatalog, item.name), [productCatalog, item.name])
   const displayIcon = item.iconKey ?? catalogIcon
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -603,7 +610,7 @@ const ItemRow = memo(function ItemRow({
             )}
             <p className={styles.sheetIconLabel}>O elige un ícono</p>
             <div className={styles.iconGrid}>
-              {PRODUCT_ICON_KEYS.map((key) => (
+              {ALL_ICON_KEYS.map((key) => (
                 <button
                   key={key}
                   type="button"
