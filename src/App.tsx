@@ -3,14 +3,17 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
 import { useShoppingLists } from './hooks/useShoppingLists'
 import { useCategories } from './hooks/useCategories'
+import { useProductCatalog } from './hooks/useProductCatalog'
 import { getInitialTheme, applyTheme, type Theme } from './lib/theme'
 import { uploadItemImage, deleteItemImage } from './lib/imageUpload'
 import { rememberProductPhoto } from './lib/productPhotos'
 import { buildItemNameHistory } from './lib/itemSuggestions'
+import { buildCatalogMap } from './lib/productCatalog'
 import { buildBackup, downloadBackup, parseBackup } from './lib/backup'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { Home } from './components/Home'
 import { Categories } from './components/Categories'
+import { Products } from './components/Products'
 import { ListDetail } from './components/ListDetail'
 import { Settings } from './components/Settings'
 import { TabBar, type Tab } from './components/TabBar'
@@ -90,7 +93,16 @@ function App() {
     reorderCategories,
   } = useCategories(session)
 
+  const {
+    catalog: productCatalog,
+    loading: productCatalogLoading,
+    createEntry: createCatalogEntry,
+    updateEntry: updateCatalogEntry,
+    deleteEntry: deleteCatalogEntry,
+  } = useProductCatalog(session)
+
   const itemNameHistory = useMemo(() => buildItemNameHistory(lists), [lists])
+  const catalogMap = useMemo(() => buildCatalogMap(productCatalog), [productCatalog])
 
   function showUndoToast(message: string, onUndo: () => void, onExpire?: () => void) {
     window.clearTimeout(toastTimeoutRef.current)
@@ -206,6 +218,7 @@ function App() {
           list={selectedList}
           categories={categories}
           itemNameHistory={itemNameHistory}
+          productCatalog={catalogMap}
           onBack={() => setSelectedListId(null)}
           onAddItem={(name, quantity, categoryId) => addItem(selectedList.id, name, quantity, categoryId)}
           onUpdateItem={(itemId, name, quantity, categoryId, price) =>
@@ -265,6 +278,15 @@ function App() {
             onUpdate={updateCategory}
             onDelete={deleteCategory}
             onReorder={reorderCategories}
+            onConfirm={confirmAction}
+          />
+        ) : activeTab === 'products' ? (
+          <Products
+            catalog={productCatalog}
+            loading={productCatalogLoading}
+            onCreate={createCatalogEntry}
+            onUpdate={updateCatalogEntry}
+            onDelete={deleteCatalogEntry}
             onConfirm={confirmAction}
           />
         ) : (

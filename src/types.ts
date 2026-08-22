@@ -25,3 +25,9 @@ export interface Category {
   icon: string
   position: number
 }
+
+export interface ProductCatalogEntry {
+  id: string
+  name: string
+  iconKey: string
+}

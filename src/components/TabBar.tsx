@@ -1,7 +1,7 @@
 import { Icon, type IconName } from './Icon'
 import styles from './TabBar.module.css'
 
-export type Tab = 'lists' | 'categories' | 'settings'
+export type Tab = 'lists' | 'categories' | 'products' | 'settings'
 
 interface TabBarProps {
   active: Tab
@@ -11,6 +11,7 @@ interface TabBarProps {
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'lists', label: 'Listas', icon: 'list' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
+  { id: 'products', label: 'Productos', icon: 'cart' },
   { id: 'settings', label: 'Ajustes', icon: 'settings' },
 ]
 
