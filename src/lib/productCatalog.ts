@@ -39,6 +39,7 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'apio', iconKey: 'celery' },
   { name: 'pimiento', iconKey: 'pepper' },
   { name: 'pimenton', iconKey: 'pepper' },
+  { name: 'ají cayena', iconKey: 'cayenne' },
 
   // Carnes y pescados
   { name: 'carne molida', iconKey: 'meat' },

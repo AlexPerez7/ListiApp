@@ -31,6 +31,12 @@ import pearImg from '../assets/products/pear.webp'
 import pineappleImg from '../assets/products/pineapple.webp'
 import strawberryImg from '../assets/products/strawberry.webp'
 import watermelonImg from '../assets/products/watermelon.webp'
+import garlicImg from '../assets/products/garlic.webp'
+import lemonImg from '../assets/products/lemon.webp'
+import onionImg from '../assets/products/onion.webp'
+import pepperImg from '../assets/products/pepper.webp'
+import potatoImg from '../assets/products/potato.webp'
+import cayenneImg from '../assets/products/cayenne.webp'
 
 export const PHOTOS: Record<string, string> = {
   apple: appleImg,
@@ -58,6 +64,12 @@ export const PHOTOS: Record<string, string> = {
   pineapple: pineappleImg,
   strawberry: strawberryImg,
   watermelon: watermelonImg,
+  garlic: garlicImg,
+  lemon: lemonImg,
+  onion: onionImg,
+  pepper: pepperImg,
+  potato: potatoImg,
+  cayenne: cayenneImg,
 }
 
 export const ICONS: Record<string, ReactElement> = {
