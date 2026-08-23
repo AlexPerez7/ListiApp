@@ -51,6 +51,12 @@ import chickenImg from '../assets/products/chicken.webp'
 import cheeseImg from '../assets/products/cheese.webp'
 import cakeImg from '../assets/products/cake.webp'
 import sausageImg from '../assets/products/sausage.webp'
+import sugarImg from '../assets/products/sugar.webp'
+import pastaImg from '../assets/products/pasta.webp'
+import cookieImg from '../assets/products/cookie.webp'
+import flourImg from '../assets/products/flour.webp'
+import iceCreamImg from '../assets/products/iceCream.webp'
+import iceImg from '../assets/products/ice.webp'
 
 export const PHOTOS: Record<string, string> = {
   apple: appleImg,
@@ -98,6 +104,12 @@ export const PHOTOS: Record<string, string> = {
   cheese: cheeseImg,
   cake: cakeImg,
   sausage: sausageImg,
+  sugar: sugarImg,
+  pasta: pastaImg,
+  cookie: cookieImg,
+  flour: flourImg,
+  iceCream: iceCreamImg,
+  ice: iceImg,
 }
 
 export const ICONS: Record<string, ReactElement> = {
