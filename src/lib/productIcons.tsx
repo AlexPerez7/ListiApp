@@ -37,6 +37,20 @@ import onionImg from '../assets/products/onion.webp'
 import pepperImg from '../assets/products/pepper.webp'
 import potatoImg from '../assets/products/potato.webp'
 import cayenneImg from '../assets/products/cayenne.webp'
+import asadoImg from '../assets/products/asado.webp'
+import steakImg from '../assets/products/steak.webp'
+import chocolateImg from '../assets/products/chocolate.webp'
+import soapImg from '../assets/products/soap.webp'
+import hamImg from '../assets/products/ham.webp'
+import butterImg from '../assets/products/butter.webp'
+import breadImg from '../assets/products/bread.webp'
+import paperImg from '../assets/products/paper.webp'
+import diaperImg from '../assets/products/diaper.webp'
+import fishImg from '../assets/products/fish.webp'
+import chickenImg from '../assets/products/chicken.webp'
+import cheeseImg from '../assets/products/cheese.webp'
+import cakeImg from '../assets/products/cake.webp'
+import sausageImg from '../assets/products/sausage.webp'
 
 export const PHOTOS: Record<string, string> = {
   apple: appleImg,
@@ -70,6 +84,20 @@ export const PHOTOS: Record<string, string> = {
   pepper: pepperImg,
   potato: potatoImg,
   cayenne: cayenneImg,
+  asado: asadoImg,
+  steak: steakImg,
+  chocolate: chocolateImg,
+  soap: soapImg,
+  ham: hamImg,
+  butter: butterImg,
+  bread: breadImg,
+  paper: paperImg,
+  diaper: diaperImg,
+  fish: fishImg,
+  chicken: chickenImg,
+  cheese: cheeseImg,
+  cake: cakeImg,
+  sausage: sausageImg,
 }
 
 export const ICONS: Record<string, ReactElement> = {
