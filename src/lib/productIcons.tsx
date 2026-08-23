@@ -73,6 +73,12 @@ export const ICONS: Record<string, ReactElement> = {
       <path d="M12 6.5v2" stroke="#5a8f3c" strokeWidth="1.4" strokeLinecap="round" />
     </>
   ),
+  lemon: (
+    <>
+      <path d="M12 6.5c4 0 6.5 3 6.5 6.5S16 19.5 12 19.5 5.5 16.5 5.5 13 8 6.5 12 6.5Z" fill="#e6d84b" />
+      <path d="M18.3 12.2c1-.3 1.9 0 2.2.8M5.7 13.8c-1 .3-1.9 0-2.2-.8" stroke="#c9b93a" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+    </>
+  ),
   banana: (
     <path
       d="M6 15c0 3.5 3.2 5.5 7 4.7 3.3-.7 5.6-3.3 5.5-4.7-.1-1-1-1.2-1.6-.5-1.3 1.7-3.7 3-6 3.2-2.5.2-4.2-1-4.5-3-.2-1.3.6-1.8 1.2-1.2"
