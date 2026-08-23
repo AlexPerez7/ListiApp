@@ -445,6 +445,19 @@ export const ICONS: Record<string, ReactElement> = {
       <path d="M14 6.5h2.3c.6 0 1 .4 1 1s-.4 1-1 1H14" fill="none" stroke="#3f8cbf" strokeWidth="1" strokeLinecap="round" />
     </>
   ),
+  bleach: (
+    <>
+      <rect x="9" y="9" width="6" height="10" rx="1" fill="#eef1f4" stroke="#c3cad1" strokeWidth="0.8" />
+      <rect x="10" y="5" width="4" height="4" rx="0.6" fill="#e0433f" />
+      <path d="M10.2 12h3.6M10.2 14.3h3.6M10.2 16.6h2.4" stroke="#c3cad1" strokeWidth="0.9" strokeLinecap="round" />
+    </>
+  ),
+  soap: (
+    <>
+      <rect x="5.5" y="10" width="13" height="7.5" rx="3" fill="#f6d9c4" />
+      <path d="M8.5 13.7c1.8 1 5.2 1 7 0" fill="none" stroke="#e3b291" strokeWidth="1" strokeLinecap="round" />
+    </>
+  ),
   shampoo: (
     <path d="M9.5 5h5v2.5c1 .4 1.5 1.2 1.5 2.3V19c0 .8-.7 1.5-1.5 1.5h-5c-.8 0-1.5-.7-1.5-1.5V9.8c0-1.1.5-1.9 1.5-2.3Z" fill="#a875c9" />
   ),

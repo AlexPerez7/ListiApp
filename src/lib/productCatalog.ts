@@ -98,8 +98,8 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
 
   // Limpieza e higiene
   { name: 'detergente', iconKey: 'cleaning' },
-  { name: 'cloro', iconKey: 'cleaning' },
-  { name: 'jabón', iconKey: 'cleaning' },
+  { name: 'cloro', iconKey: 'bleach' },
+  { name: 'jabón', iconKey: 'soap' },
   { name: 'shampoo', iconKey: 'shampoo' },
   { name: 'champú', iconKey: 'shampoo' },
   { name: 'desodorante', iconKey: 'deodorant' },
