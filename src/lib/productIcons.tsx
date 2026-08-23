@@ -57,6 +57,15 @@ import cookieImg from '../assets/products/cookie.webp'
 import flourImg from '../assets/products/flour.webp'
 import iceCreamImg from '../assets/products/iceCream.webp'
 import iceImg from '../assets/products/ice.webp'
+import waterImg from '../assets/products/water.webp'
+import sodaImg from '../assets/products/soda.webp'
+import beerImg from '../assets/products/beer.webp'
+import coffeeImg from '../assets/products/coffee.webp'
+import juiceImg from '../assets/products/juice.webp'
+import condimentImg from '../assets/products/condiment.webp'
+import teaImg from '../assets/products/tea.webp'
+import wineImg from '../assets/products/wine.webp'
+import mateImg from '../assets/products/mate.webp'
 
 export const PHOTOS: Record<string, string> = {
   apple: appleImg,
@@ -110,6 +119,15 @@ export const PHOTOS: Record<string, string> = {
   flour: flourImg,
   iceCream: iceCreamImg,
   ice: iceImg,
+  water: waterImg,
+  soda: sodaImg,
+  beer: beerImg,
+  coffee: coffeeImg,
+  juice: juiceImg,
+  condiment: condimentImg,
+  tea: teaImg,
+  wine: wineImg,
+  mate: mateImg,
 }
 
 export const ICONS: Record<string, ReactElement> = {
