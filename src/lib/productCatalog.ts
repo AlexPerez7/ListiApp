@@ -19,12 +19,9 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'banano', iconKey: 'banana' },
   { name: 'pera', iconKey: 'pear' },
   { name: 'uva', iconKey: 'grapes' },
-  { name: 'uvas', iconKey: 'grapes' },
   { name: 'sandia', iconKey: 'watermelon' },
   { name: 'frutilla', iconKey: 'strawberry' },
-  { name: 'frutillas', iconKey: 'strawberry' },
   { name: 'ananá', iconKey: 'pineapple' },
-  { name: 'ananas', iconKey: 'pineapple' },
   { name: 'piña', iconKey: 'pineapple' },
   { name: 'palta', iconKey: 'avocado' },
   { name: 'aguacate', iconKey: 'avocado' },
@@ -32,7 +29,6 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   // Verduras
   { name: 'tomate', iconKey: 'tomato' },
   { name: 'papa', iconKey: 'potato' },
-  { name: 'papas', iconKey: 'potato' },
   { name: 'cebolla', iconKey: 'onion' },
   { name: 'zanahoria', iconKey: 'carrot' },
   { name: 'lechuga', iconKey: 'leafy' },
@@ -53,20 +49,15 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'bife', iconKey: 'meat' },
   { name: 'asado', iconKey: 'meat' },
   { name: 'milanesa', iconKey: 'meat' },
-  { name: 'milanesas', iconKey: 'meat' },
   { name: 'pollo', iconKey: 'chicken' },
   { name: 'pechuga', iconKey: 'chicken' },
   { name: 'nuggets', iconKey: 'nuggets' },
   { name: 'pescado', iconKey: 'fish' },
   { name: 'atun', iconKey: 'fish' },
-  { name: 'jamon', iconKey: 'ham' },
   { name: 'jamón', iconKey: 'ham' },
   { name: 'hamburguesa', iconKey: 'pattyRaw' },
-  { name: 'hamburguesas', iconKey: 'pattyRaw' },
   { name: 'medallon', iconKey: 'pattyRaw' },
-  { name: 'medallones', iconKey: 'pattyRaw' },
   { name: 'salchicha', iconKey: 'sausage' },
-  { name: 'salchichas', iconKey: 'sausage' },
 
   // Lácteos y huevos
   { name: 'leche', iconKey: 'milk' },
@@ -77,15 +68,13 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'mantequilla', iconKey: 'butter' },
   { name: 'crema', iconKey: 'butter' },
   { name: 'huevo', iconKey: 'egg' },
-  { name: 'huevos', iconKey: 'egg' },
 
   // Panadería
   { name: 'pan', iconKey: 'bread' },
   { name: 'tostadas', iconKey: 'bread' },
-  { name: 'facturas', iconKey: 'pastry' },
-  { name: 'medialunas', iconKey: 'pastry' },
-  { name: 'galletitas', iconKey: 'cookie' },
-  { name: 'galletas', iconKey: 'cookie' },
+  { name: 'factura', iconKey: 'pastry' },
+  { name: 'medialuna', iconKey: 'pastry' },
+  { name: 'galleta', iconKey: 'cookie' },
   { name: 'torta', iconKey: 'cake' },
 
   // Almacén
@@ -93,7 +82,6 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'fideos', iconKey: 'pasta' },
   { name: 'pasta', iconKey: 'pasta' },
   { name: 'harina', iconKey: 'flour' },
-  { name: 'azucar', iconKey: 'sugarSalt' },
   { name: 'azúcar', iconKey: 'sugarSalt' },
   { name: 'sal', iconKey: 'sugarSalt' },
   { name: 'mayonesa', iconKey: 'condiment' },
@@ -101,9 +89,7 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'aceite', iconKey: 'oil' },
 
   // Bebidas
-  { name: 'cafe', iconKey: 'coffee' },
   { name: 'café', iconKey: 'coffee' },
-  { name: 'te', iconKey: 'tea' },
   { name: 'té', iconKey: 'tea' },
   { name: 'mate', iconKey: 'mate' },
   { name: 'yerba', iconKey: 'mate' },
@@ -121,18 +107,13 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   // Limpieza e higiene
   { name: 'detergente', iconKey: 'cleaning' },
   { name: 'lavandina', iconKey: 'cleaning' },
-  { name: 'jabon', iconKey: 'cleaning' },
   { name: 'jabón', iconKey: 'cleaning' },
   { name: 'shampoo', iconKey: 'shampoo' },
-  { name: 'champu', iconKey: 'shampoo' },
   { name: 'champú', iconKey: 'shampoo' },
   { name: 'desodorante', iconKey: 'deodorant' },
-  { name: 'desodorantes', iconKey: 'deodorant' },
   { name: 'papel', iconKey: 'paper' },
-  { name: 'papel higienico', iconKey: 'paper' },
   { name: 'papel higiénico', iconKey: 'paper' },
   { name: 'pañales', iconKey: 'diaper' },
-  { name: 'panales', iconKey: 'diaper' },
 ]
 
 export function normalizeProductName(name: string): string {
