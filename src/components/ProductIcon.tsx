@@ -15,6 +15,10 @@ export function ProductIcon({ iconKey, size = 20, className }: ProductIconProps)
       <img
         src={photo}
         alt=""
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
         className={className}
         style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }}
       />
