@@ -288,6 +288,13 @@ export const ICONS: Record<string, ReactElement> = {
       <path d="M8 11c-1.5-.5-3-.5-4 0 1 1 2.5 1.5 4 1.4Z" fill="#4d87a6" />
     </>
   ),
+  tuna: (
+    <>
+      <ellipse cx="12" cy="12" rx="7" ry="4.5" fill="#c9ccd1" stroke="#a7abb2" strokeWidth="0.7" />
+      <ellipse cx="12" cy="10.7" rx="7" ry="4.2" fill="#e3e5e8" stroke="#a7abb2" strokeWidth="0.7" />
+      <ellipse cx="12" cy="10.7" rx="4.8" ry="2.7" fill="none" stroke="#a7abb2" strokeWidth="0.6" />
+    </>
+  ),
   egg: (
     <ellipse cx="12" cy="13.5" rx="4.5" ry="6" fill="#f7ecd8" stroke="#e6d6b8" strokeWidth="0.6" />
   ),

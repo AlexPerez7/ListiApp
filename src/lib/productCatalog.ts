@@ -49,7 +49,7 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'pechuga', iconKey: 'chicken' },
   { name: 'nuggets', iconKey: 'nuggets' },
   { name: 'pescado', iconKey: 'fish' },
-  { name: 'atun', iconKey: 'fish' },
+  { name: 'atun', iconKey: 'tuna' },
   { name: 'jamón', iconKey: 'ham' },
   { name: 'hamburguesa', iconKey: 'pattyRaw' },
   { name: 'medallon', iconKey: 'pattyRaw' },
@@ -57,7 +57,6 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
 
   // Lácteos y huevos
   { name: 'leche', iconKey: 'milk' },
-  { name: 'yogur', iconKey: 'milk' },
   { name: 'yogurt', iconKey: 'milk' },
   { name: 'queso', iconKey: 'cheese' },
   { name: 'mantequilla', iconKey: 'butter' },
