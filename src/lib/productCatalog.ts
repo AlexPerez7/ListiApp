@@ -42,10 +42,8 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
 
   // Carnes y pescados
   { name: 'carne molida', iconKey: 'meat' },
-  { name: 'carne picada', iconKey: 'meat' },
-  { name: 'bistec', iconKey: 'meat' },
-  { name: 'asado', iconKey: 'meat' },
-  { name: 'milanesa', iconKey: 'meat' },
+  { name: 'bistec', iconKey: 'steak' },
+  { name: 'asado', iconKey: 'asado' },
   { name: 'pollo', iconKey: 'chicken' },
   { name: 'pechuga', iconKey: 'chicken' },
   { name: 'nuggets', iconKey: 'nuggets' },

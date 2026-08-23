@@ -218,6 +218,23 @@ export const ICONS: Record<string, ReactElement> = {
       <circle cx="15.8" cy="10.3" r="1.5" fill="none" stroke="#f2b9ae" strokeWidth="1.1" />
     </>
   ),
+  steak: (
+    <>
+      <path
+        d="M5.5 12.5c0-3.4 3-6 6.7-6s6.3 2.4 6.3 5.6c0 3.5-3 6.4-6.8 6.4-3.4 0-6.2-2.6-6.2-6Z"
+        fill="#b5473f"
+      />
+      <path d="M8 9.5 15 15M9 13l4.5 3.3M11.5 7.8l4.8 4.4" stroke="#8c332c" strokeWidth="1" strokeLinecap="round" />
+      <path d="M6 11.5c-.6-1.4 0-2.7 1.3-3" fill="none" stroke="#e8b7a8" strokeWidth="1.2" strokeLinecap="round" />
+    </>
+  ),
+  asado: (
+    <>
+      <path d="M5 9.5c0-1.7 1.5-2.8 3-2.3l9 3c1.6.5 2 2.5.8 3.7l-8.5 8.4c-1.2 1.2-3.2.6-3.5-1L5 9.5Z" fill="#a8483f" />
+      <path d="M8 9l7 6.5M6.8 12.2l6.3 5.8" stroke="#7d332b" strokeWidth="1" strokeLinecap="round" />
+      <path d="M17.5 5.5c.9.5 1.4 1.4 1.2 2.4" fill="none" stroke="#e8d9c9" strokeWidth="1.3" strokeLinecap="round" />
+    </>
+  ),
   chicken: (
     <>
       <path d="M14 6.5c2 0 3.5 1.6 3.5 3.6 0 1.6-.9 3-2.3 3.5.9 1.5.6 4-1 6.4-1 1.5-2.7 1.5-3.4.2-1-1.9-.6-4.6.6-6.6-1.4-.2-2.4-1.4-2.4-2.9 0-1.7 1.4-3.1 3.1-3.1Z" fill="#e0b382" />
