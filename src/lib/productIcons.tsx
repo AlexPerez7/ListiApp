@@ -66,6 +66,9 @@ import condimentImg from '../assets/products/condiment.webp'
 import teaImg from '../assets/products/tea.webp'
 import wineImg from '../assets/products/wine.webp'
 import mateImg from '../assets/products/mate.webp'
+import tunaImg from '../assets/products/tuna.webp'
+import bleachImg from '../assets/products/bleach.webp'
+import saltImg from '../assets/products/salt.webp'
 
 export const PHOTOS: Record<string, string> = {
   apple: appleImg,
@@ -128,6 +131,9 @@ export const PHOTOS: Record<string, string> = {
   tea: teaImg,
   wine: wineImg,
   mate: mateImg,
+  tuna: tunaImg,
+  bleach: bleachImg,
+  salt: saltImg,
 }
 
 export const ICONS: Record<string, ReactElement> = {
