@@ -348,7 +348,7 @@ export const ICONS: Record<string, ReactElement> = {
       <rect x="8.5" y="12" width="7" height="2.2" rx="0.4" fill="#c94f4f" opacity="0.85" />
     </>
   ),
-  sugarSalt: (
+  salt: (
     <>
       <path
         d="M12 4c.6 0 1 .5 1 1.1v1.3c2.6.6 4 2.9 4 5.8v6.3c0 1.4-1.1 2.5-2.5 2.5h-5C8.1 21 7 19.9 7 18.5v-6.3c0-2.9 1.4-5.2 4-5.8V5.1c0-.6.4-1.1 1-1.1Z"
@@ -357,6 +357,17 @@ export const ICONS: Record<string, ReactElement> = {
         strokeWidth="0.6"
       />
       <path d="M10.3 6.8c.5 1 .9 1 1.7 1s1.2 0 1.7-1" stroke="#c9c3ac" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+    </>
+  ),
+  sugar: (
+    <>
+      <path
+        d="M6.5 8.5 12 5l5.5 3.5v8L12 20l-5.5-3.5Z"
+        fill="#f7efd8"
+        stroke="#e4d6a8"
+        strokeWidth="0.6"
+      />
+      <path d="M8 9.3 12 11.7l4-2.4M12 11.7V19" stroke="#e4d6a8" strokeWidth="0.7" fill="none" strokeLinecap="round" />
     </>
   ),
   condiment: (
