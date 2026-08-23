@@ -20,6 +20,17 @@ import eggImg from '../assets/products/egg.jpg'
 import avocadoImg from '../assets/products/avocado.jpg'
 import tomatoImg from '../assets/products/tomato.jpg'
 import carrotImg from '../assets/products/carrot.jpg'
+import riceImg from '../assets/products/rice.jpg'
+import shampooImg from '../assets/products/shampoo.jpg'
+import bananaImg from '../assets/products/banana.jpg'
+import cornImg from '../assets/products/corn.jpg'
+import grapesImg from '../assets/products/grapes.jpg'
+import leafyImg from '../assets/products/leafy.jpg'
+import citrusImg from '../assets/products/citrus.jpg'
+import pearImg from '../assets/products/pear.jpg'
+import pineappleImg from '../assets/products/pineapple.jpg'
+import strawberryImg from '../assets/products/strawberry.jpg'
+import watermelonImg from '../assets/products/watermelon.jpg'
 
 export const PHOTOS: Record<string, string> = {
   apple: appleImg,
@@ -36,6 +47,17 @@ export const PHOTOS: Record<string, string> = {
   avocado: avocadoImg,
   tomato: tomatoImg,
   carrot: carrotImg,
+  rice: riceImg,
+  shampoo: shampooImg,
+  banana: bananaImg,
+  corn: cornImg,
+  grapes: grapesImg,
+  leafy: leafyImg,
+  citrus: citrusImg,
+  pear: pearImg,
+  pineapple: pineappleImg,
+  strawberry: strawberryImg,
+  watermelon: watermelonImg,
 }
 
 export const ICONS: Record<string, ReactElement> = {

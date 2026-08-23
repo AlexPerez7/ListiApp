@@ -25,6 +25,7 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'frutillas', iconKey: 'strawberry' },
   { name: 'ananá', iconKey: 'pineapple' },
   { name: 'ananas', iconKey: 'pineapple' },
+  { name: 'piña', iconKey: 'pineapple' },
   { name: 'palta', iconKey: 'avocado' },
   { name: 'aguacate', iconKey: 'avocado' },
 
