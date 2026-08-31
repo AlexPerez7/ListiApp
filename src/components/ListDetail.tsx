@@ -573,9 +573,9 @@ const ItemRow = memo(function ItemRow({
       ) : displayImageUrl ? (
         <img src={displayImageUrl} alt="" className={styles.itemThumbImg} />
       ) : displayIconKey ? (
-        <ProductIcon iconKey={displayIconKey} size={20} />
+        <ProductIcon iconKey={displayIconKey} size={28} />
       ) : (
-        <Icon name="cart" size={18} />
+        <Icon name="cart" size={22} />
       )}
     </button>
   )
