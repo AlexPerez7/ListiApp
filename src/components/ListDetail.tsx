@@ -710,7 +710,7 @@ const ItemRow = memo(function ItemRow({
 
   return (
     <li ref={setNodeRef} style={dragStyle} className={styles.itemWrapper}>
-      <div className={styles.swipeBg} aria-hidden="true">
+      <div className={styles.swipeBg} aria-hidden="true" style={{ opacity: swipeOffset === 0 ? 0 : 1 }}>
         <Icon name="close" size={18} />
       </div>
       <div
