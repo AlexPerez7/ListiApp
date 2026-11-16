@@ -18,7 +18,7 @@ export function ToastHost({ aboveTabs }: ToastHostProps) {
   return createPortal(
     <div
       key={toast.id}
-      className={`${styles.toast} ${aboveTabs ? styles.toastAboveTabs : ''}`}
+      className={`${styles.toast} ${toast.placement === 'top' ? styles.toastTop : aboveTabs ? styles.toastAboveTabs : ''}`}
       role={toast.kind === 'error' ? 'alert' : 'status'}
     >
       {toast.kind !== 'info' && (

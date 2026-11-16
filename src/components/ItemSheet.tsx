@@ -6,6 +6,7 @@ import { matchSuggestions, type ItemMemory } from '../lib/itemSuggestions'
 import { describeUploadError } from '../lib/imageUpload'
 import { readPurchaseDraft } from '../lib/pricing'
 import { usePrefs } from '../lib/prefs'
+import { showToast } from '../lib/toast'
 import { BottomSheet } from './BottomSheet'
 import { Icon } from './Icon'
 import { ItemThumb } from './ItemThumb'
@@ -81,9 +82,11 @@ export function AddItemSheet({
       // Ya estaba comprado: lo devolvemos a pendientes en vez de duplicarlo.
       onToggleItem(existing.id)
       setNotice({ text: `«${existing.name}» volvió a pendientes` })
+      showToast({ kind: 'success', message: `«${existing.name}» volvió a pendientes`, placement: 'top' })
     } else {
       onAdd({ name: trimmed, ...purchase, categoryId: chosenCategoryId || undefined })
       setNotice({ text: `«${trimmed}» agregado` })
+      showToast({ kind: 'success', message: `Producto agregado: ${trimmed}`, placement: 'top' })
     }
 
     setName('')

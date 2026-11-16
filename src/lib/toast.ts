@@ -11,6 +11,7 @@ export interface ToastOptions {
   /** Corre cuando el aviso se cierra sin que se use la acción (ej: limpieza definitiva tras no deshacer). */
   onExpire?: () => void
   duration?: number
+  placement?: 'bottom' | 'top'
 }
 
 export interface ActiveToast extends ToastOptions {

@@ -22,6 +22,11 @@
   bottom: calc(var(--tabbar-height) + 84px + var(--safe-bottom));
 }
 
+.toastTop {
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  bottom: auto;
+}
+
 @keyframes toastIn {
   from {
     opacity: 0;
