@@ -82,8 +82,10 @@ import frozenFruitImg from '../assets/products/frozenFruit.webp'
 import peanutButterImg from '../assets/products/peanutButter.webp'
 import mixedNutsImg from '../assets/products/mixedNuts.webp'
 import chiaImg from '../assets/products/chia.webp'
+import oatsImg from '../assets/products/oats.webp'
 
 export const PHOTOS: Record<string, string> = {
+  oats: oatsImg,
   frozenFruit: frozenFruitImg,
   peanutButter: peanutButterImg,
   mixedNuts: mixedNutsImg,

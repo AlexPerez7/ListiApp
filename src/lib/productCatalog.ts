@@ -71,6 +71,7 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
 
   // Almacén
   { name: 'arroz', iconKey: 'rice' },
+  { name: 'avena', iconKey: 'oats' },
   { name: 'fideos', iconKey: 'pasta' },
   { name: 'pasta', iconKey: 'pasta' },
   { name: 'harina', iconKey: 'flour' },
