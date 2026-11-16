@@ -1,7 +1,6 @@
+import type { Tab } from '../hooks/useRoute'
 import { Icon, type IconName } from './Icon'
 import styles from './TabBar.module.css'
-
-export type Tab = 'lists' | 'categories' | 'products' | 'settings'
 
 interface TabBarProps {
   active: Tab
@@ -17,16 +16,19 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
 
 export function TabBar({ active, onChange }: TabBarProps) {
   return (
-    <nav className={styles.tabBar}>
+    <nav className={styles.tabBar} aria-label="Secciones">
       {TABS.map((tab) => (
         <button
           key={tab.id}
+          type="button"
           className={`${styles.tab} ${tab.id === active ? styles.tabActive : ''}`}
           onClick={() => onChange(tab.id)}
           aria-current={tab.id === active ? 'page' : undefined}
         >
-          <Icon name={tab.icon} size={22} />
-          <span className={styles.tabLabel}>{tab.label}</span>
+          <span className={styles.iconPill}>
+            <Icon name={tab.icon} size={21} />
+          </span>
+          <span className={styles.label}>{tab.label}</span>
         </button>
       ))}
     </nav>

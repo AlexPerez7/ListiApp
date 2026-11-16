@@ -1,60 +1,171 @@
-.page {
-  flex: 1;
+.account {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 24px 16px 40px;
-}
-
-.header {
-  padding-top: 8px;
-}
-
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--color-primary-dark);
-  letter-spacing: -0.3px;
-}
-
-.section {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface);
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
   border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-brand), var(--color-primary));
+  color: #ffffff;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.accountText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.accountEmail {
+  font-size: 16px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountSync {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--color-text-secondary);
+}
+
+.syncDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.accountSyncOk .syncDot {
+  background: var(--color-brand);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
 .row {
+  width: 100%;
+  min-height: 58px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: 14px;
+  padding: 8px 14px 8px 16px;
   border: none;
-  border-bottom: 1px solid var(--color-border);
   background: none;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--color-text);
-  font-size: 15px;
   text-align: left;
-  transition: background-color 0.15s ease;
 }
 
-.section .row:last-child {
-  border-bottom: none;
+.row + .row,
+.row + input + .row {
+  border-top: 1px solid var(--color-border);
 }
 
-.row:active {
-  background: rgba(31, 41, 55, 0.05);
+.row > svg:first-child {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
 }
 
-.dangerRow {
-  color: #dc2626;
+button.row:active:not(:disabled) {
+  background: var(--color-surface-2);
+}
+
+.row:disabled {
+  opacity: 0.5;
+}
+
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowLabel small {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-text-faint);
+}
+
+.rowDanger,
+.rowDanger > svg:first-child {
+  color: var(--color-danger);
+}
+
+.segmented {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.segment {
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.segmentActive {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.select {
+  max-width: 56%;
+  height: 40px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .version {
+  margin-top: 4px;
   text-align: center;
   font-size: 13px;
-  color: var(--color-text-secondary);
-  margin-top: auto;
+  color: var(--color-text-faint);
 }

@@ -4,13 +4,30 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#4CAF93" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#f5f7f3" />
     <meta name="description" content="Listas de compras simples, rápidas y siempre a mano." />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="ListiApp" />
     <title>ListiApp</title>
+    <script>
+      // Aplica el tema guardado antes del primer pintado, para evitar el
+      // destello claro al abrir la app en modo oscuro.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('listiapp-theme')
+          var dark =
+            stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+          if (dark) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0f1417')
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

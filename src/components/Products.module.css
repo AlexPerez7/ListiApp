@@ -1,331 +1,91 @@
-.page {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 24px 16px 16px;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
-.header {
-  padding-top: 4px;
-}
-
-.title {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--color-primary-dark);
-  letter-spacing: -0.3px;
-}
-
-.subtitle {
-  margin-top: 4px;
-  font-size: 14px;
-  color: var(--color-text-secondary);
-}
-
-.searchInput {
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  font-size: 15px;
-  color: var(--color-text);
-}
-
-.searchInput:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-
-.empty {
-  text-align: center;
-  color: var(--color-text-secondary);
-  padding: 40px 16px;
-  font-size: 15px;
+.tile {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-}
-
-.emptyIcon {
-  color: var(--color-border);
-  margin-bottom: 8px;
-}
-
-.list {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface);
+  padding: 14px 6px 12px;
+  border: none;
   border-radius: var(--radius-lg);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease;
+}
+
+.tile:active {
+  transform: scale(0.96);
+}
+
+.tileImage,
+.preview {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
   overflow: hidden;
 }
 
-.row {
-  border-bottom: 1px solid var(--color-border);
+.tileImage {
+  width: 60px;
+  height: 60px;
 }
 
-.row:last-child {
-  border-bottom: none;
+.preview {
+  width: 50px;
+  height: 50px;
+  background: var(--color-surface-2);
+  transition: opacity 0.15s ease;
 }
 
-.rowButton {
+.previewUploading {
+  opacity: 0.4;
+}
+
+.tilePhoto {
   width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-  transition: background-color 0.15s ease;
-}
-
-.rowButton:active {
-  background: var(--color-bg);
-}
-
-.rowIcon {
-  flex-shrink: 0;
-}
-
-.rowImg {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  height: 100%;
   object-fit: cover;
 }
 
-.rowName {
-  font-size: 16px;
-  font-weight: 500;
+.tileName {
+  max-width: 100%;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--color-text);
+  text-transform: capitalize;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.fabLayer {
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  height: 0;
-  pointer-events: none;
-  z-index: 45;
-}
-
-.fab {
-  position: absolute;
-  right: 16px;
-  bottom: calc(84px + env(safe-area-inset-bottom, 0));
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-accent);
-  color: #ffffff;
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  transition: background-color 0.15s ease, transform 0.1s ease;
-}
-
-.fab:active {
-  background: var(--color-accent-dark);
-  transform: scale(0.94);
-}
-
-.sheetOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.25);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 50;
-  animation: fadeIn 0.15s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.sheet {
-  width: 100%;
-  max-width: 480px;
-  background: var(--color-surface);
-  border-radius: 20px 20px 0 0;
-  padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0));
+.form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  animation: sheetUp 0.2s ease;
+  gap: 14px;
 }
 
-@keyframes sheetUp {
-  from {
-    transform: translateY(16px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.sheetHandle {
-  width: 36px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--color-border);
-  align-self: center;
-  margin-bottom: 4px;
-}
-
-.sheetTitle {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.input {
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-size: 15px;
-  color: var(--color-text);
-}
-
-.input:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-
-.uploadButton {
+.nameRow {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 13px 16px;
-  border-radius: var(--radius-md);
-  border: none;
-  background: var(--color-accent);
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 600;
+  gap: 10px;
 }
 
-.uploadButton:disabled {
-  opacity: 0.6;
-}
-
-.imageError {
-  color: #dc2626;
-  font-size: 13px;
-  text-align: center;
-}
-
-.removePhotoButton {
-  padding: 4px;
-  border: none;
-  background: none;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-  align-self: center;
-}
-
-.removePhotoButton:active {
-  color: #dc2626;
-}
-
-.iconLabel {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-align: center;
-  margin-top: 4px;
-}
-
-.iconGrid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  max-height: 220px;
-  overflow-y: auto;
-  padding: 2px;
-}
-
-.iconGridOption {
-  aspect-ratio: 1;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
+.photoActions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.iconGridOption:active {
-  transform: scale(0.94);
-}
-
-.iconGridOptionSelected {
-  border-color: var(--color-primary);
-  background: var(--color-done-bg);
-}
-
-.deleteButton {
-  padding: 10px;
-  border: none;
-  background: none;
-  color: #dc2626;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.sheetActions {
-  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-top: 4px;
 }
 
-.sheetCancelButton,
-.sheetSaveButton {
-  flex: 1;
-  padding: 13px 16px;
-  border-radius: var(--radius-md);
-  border: none;
-  font-size: 15px;
+.error {
+  margin-top: -6px;
+  font-size: 13.5px;
   font-weight: 600;
-}
-
-.sheetCancelButton {
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
-}
-
-.sheetSaveButton {
-  background: var(--color-accent);
-  color: #ffffff;
-}
-
-.sheetSaveButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  color: var(--color-danger);
 }

@@ -1,144 +1,101 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { DEFAULT_CATEGORIES } from '../lib/categories'
+import { enqueue } from '../lib/outbox'
 import type { Category } from '../types'
+import { useSyncedCollection, type RealtimePayload } from './useSyncedCollection'
 
-interface DbCategory {
-  id: string
-  name: string
-  icon: string
-  position: number
+const COLUMNS = 'id, name, icon, position'
+
+function byPosition(a: Category, b: Category): number {
+  return a.position - b.position
 }
 
-function mapCategory(row: DbCategory): Category {
-  return { id: row.id, name: row.name, icon: row.icon, position: row.position }
+async function fetchCategories(): Promise<Category[] | null> {
+  const { data, error } = await supabase.from('categories').select(COLUMNS).order('position', { ascending: true })
+  if (error) {
+    console.error('Error al cargar categorías:', error.message)
+    return null
+  }
+  return (data ?? []) as Category[]
 }
 
-export function useCategories(session: Session | null) {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
-  const hasSeededRef = useRef(false)
+// Cuenta nueva: crea las categorías por defecto y las devuelve.
+async function seedIfEmpty(rows: Category[]): Promise<Category[]> {
+  if (rows.length > 0) return rows
+  const { data, error } = await supabase
+    .from('categories')
+    .insert(DEFAULT_CATEGORIES.map((category, index) => ({ ...category, position: index })))
+    .select(COLUMNS)
+  if (error) {
+    console.error('Error al crear categorías iniciales:', error.message)
+    return rows
+  }
+  return ((data ?? []) as Category[]).sort(byPosition)
+}
 
-  const fetchCategories = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id, name, icon, position')
-      .order('position', { ascending: true })
+function applyChange(prev: Category[], payload: RealtimePayload): Category[] {
+  if (payload.eventType === 'DELETE') {
+    return prev.filter((category) => category.id !== (payload.old as Partial<Category>).id)
+  }
+  const row = payload.new as unknown as Category
+  const mapped: Category = { id: row.id, name: row.name, icon: row.icon, position: row.position }
+  const exists = prev.some((category) => category.id === mapped.id)
+  const next = exists ? prev.map((category) => (category.id === mapped.id ? mapped : category)) : [...prev, mapped]
+  return next.sort(byPosition)
+}
 
-    if (error) {
-      console.error('Error al cargar categorías:', error.message)
-      return
-    }
+const REALTIME = [{ table: 'categories', apply: applyChange }]
 
-    const rows = (data ?? []) as DbCategory[]
-    setCategories(rows.map(mapCategory))
-
-    if (rows.length === 0 && !hasSeededRef.current) {
-      hasSeededRef.current = true
-      const { error: seedError } = await supabase
-        .from('categories')
-        .insert(DEFAULT_CATEGORIES.map((category, index) => ({ ...category, position: index })))
-      if (seedError) console.error('Error al crear categorías iniciales:', seedError.message)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!session) {
-      setCategories([])
-      setLoading(false)
-      hasSeededRef.current = false
-      return
-    }
-
-    setLoading(true)
-    fetchCategories().finally(() => setLoading(false))
-
-    const channel = supabase
-      .channel('categories-changes')
-      .on<DbCategory>(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'categories' },
-        (payload) => {
-          setCategories((prev) => {
-            if (payload.eventType === 'DELETE') {
-              return prev.filter((category) => category.id !== payload.old.id)
-            }
-
-            const mapped = mapCategory(payload.new)
-            const existing = prev.find((category) => category.id === mapped.id)
-            const next = existing
-              ? prev.map((category) => (category.id === mapped.id ? mapped : category))
-              : [...prev, mapped]
-            return next.sort((a, b) => a.position - b.position)
-          })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [session, fetchCategories])
+export function useCategories(userId: string) {
+  const { data: categories, setData: setCategories, loading } = useSyncedCollection<Category>({
+    userId,
+    name: 'categories',
+    fetchAll: fetchCategories,
+    realtime: REALTIME,
+    afterFirstFetch: seedIfEmpty,
+  })
 
   function createCategory(name: string, icon: string) {
     const id = crypto.randomUUID()
     const position = categories.length > 0 ? Math.max(...categories.map((c) => c.position)) + 1 : 0
-    const newCategory: Category = { id, name, icon, position }
-
-    setCategories((prev) => [...prev, newCategory])
-
-    supabase
-      .from('categories')
-      .insert({ id, name, icon, position })
-      .then(({ error }) => {
-        if (error) console.error('Error al crear categoría:', error.message)
-      })
+    setCategories((prev) => [...prev, { id, name, icon, position }])
+    enqueue('crear la categoría', { kind: 'upsert', table: 'categories', values: { id, name, icon, position } })
   }
 
   function updateCategory(categoryId: string, name: string, icon: string) {
     setCategories((prev) =>
       prev.map((category) => (category.id === categoryId ? { ...category, name, icon } : category)),
     )
-
-    supabase
-      .from('categories')
-      .update({ name, icon })
-      .eq('id', categoryId)
-      .then(({ error }) => {
-        if (error) console.error('Error al editar categoría:', error.message)
-      })
+    enqueue('editar la categoría', {
+      kind: 'update',
+      table: 'categories',
+      values: { name, icon },
+      match: { id: categoryId },
+    })
   }
 
   function reorderCategories(orderedCategoryIds: string[]) {
     const positionById = new Map(orderedCategoryIds.map((id, index) => [id, index]))
-
     setCategories((prev) =>
-      [...prev]
+      prev
         .map((category) =>
           positionById.has(category.id) ? { ...category, position: positionById.get(category.id)! } : category,
         )
-        .sort((a, b) => a.position - b.position),
+        .sort(byPosition),
     )
-
-    Promise.all(
-      orderedCategoryIds.map((id, index) => supabase.from('categories').update({ position: index }).eq('id', id)),
-    ).then((results) => {
-      const failed = results.find((r) => r.error)
-      if (failed?.error) console.error('Error al reordenar categorías:', failed.error.message)
+    orderedCategoryIds.forEach((id, index) => {
+      enqueue('reordenar las categorías', {
+        kind: 'update',
+        table: 'categories',
+        values: { position: index },
+        match: { id },
+      })
     })
   }
 
   function deleteCategory(categoryId: string) {
     setCategories((prev) => prev.filter((category) => category.id !== categoryId))
-
-    supabase
-      .from('categories')
-      .delete()
-      .eq('id', categoryId)
-      .then(({ error }) => {
-        if (error) console.error('Error al eliminar categoría:', error.message)
-      })
+    enqueue('eliminar la categoría', { kind: 'delete', table: 'categories', match: { id: categoryId } })
   }
 
   return { categories, loading, createCategory, updateCategory, deleteCategory, reorderCategories }

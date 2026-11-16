@@ -1,0 +1,74 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.quantity {
+  flex: 0 0 92px;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 2px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-primary-strong);
+}
+
+.noticeWarn {
+  color: var(--color-accent-strong);
+}
+
+.suggestion {
+  padding-left: 6px;
+}
+
+.imageRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.imagePreview {
+  flex-shrink: 0;
+  display: flex;
+  padding: 6px;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  transition: opacity 0.15s ease;
+}
+
+.imageUploading {
+  opacity: 0.4;
+}
+
+.imageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.imageChip {
+  height: 36px;
+  padding: 0 12px;
+}
+
+.deleteButton {
+  flex: 0 1 auto !important;
+}

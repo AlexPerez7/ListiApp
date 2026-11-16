@@ -1,9 +1,13 @@
 import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { ProductCatalogEntry } from '../types'
 import { ALL_ICON_KEYS } from '../lib/productIcons'
+import { normalizeProductName } from '../lib/productCatalog'
 import { describeUploadError } from '../lib/imageUpload'
+import { confirmDialog } from '../lib/confirm'
+import { BottomSheet } from './BottomSheet'
 import { ProductIcon } from './ProductIcon'
 import { Icon } from './Icon'
+import { ProductIconGrid } from './Pickers'
 import { SkeletonList } from './Skeleton'
 import styles from './Products.module.css'
 
@@ -15,219 +19,239 @@ interface ProductsProps {
   onDelete: (entryId: string) => void
   onUploadImage: (entryId: string, file: File) => Promise<void>
   onRemoveImage: (entryId: string) => void
-  onConfirm: (message: string, confirmLabel?: string) => Promise<boolean>
 }
 
-export function Products({
-  catalog,
-  loading,
-  onCreate,
-  onUpdate,
-  onDelete,
-  onUploadImage,
-  onRemoveImage,
-  onConfirm,
-}: ProductsProps) {
+export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onUploadImage, onRemoveImage }: ProductsProps) {
   const [query, setQuery] = useState('')
-  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [nameDraft, setNameDraft] = useState('')
-  const [iconDraft, setIconDraft] = useState(ALL_ICON_KEYS[0])
-  const [uploadingImage, setUploadingImage] = useState(false)
-  const [imageError, setImageError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const editingEntry = useMemo(
-    () => catalog.find((entry) => entry.id === editingEntryId) ?? null,
-    [catalog, editingEntryId],
-  )
+  // null = cerrado, 'new' = creando, otro valor = id del producto en edición
+  const [sheet, setSheet] = useState<string | null>(null)
 
   const filteredCatalog = useMemo(() => {
-    const trimmed = query.trim().toLowerCase()
-    if (!trimmed) return catalog
-    return catalog.filter((entry) => entry.name.toLowerCase().includes(trimmed))
+    const needle = normalizeProductName(query)
+    if (!needle) return catalog
+    return catalog.filter((entry) => normalizeProductName(entry.name).includes(needle))
   }, [catalog, query])
 
-  function openCreateSheet() {
-    setEditingEntryId(null)
-    setNameDraft('')
-    setIconDraft(ALL_ICON_KEYS[0])
-    setImageError(null)
-    setSheetOpen(true)
+  const editing = sheet && sheet !== 'new' ? catalog.find((entry) => entry.id === sheet) : undefined
+
+  function nameTaken(name: string, exceptId?: string): boolean {
+    const key = normalizeProductName(name)
+    return catalog.some((entry) => entry.id !== exceptId && normalizeProductName(entry.name) === key)
   }
 
-  function openEditSheet(entry: ProductCatalogEntry) {
-    setEditingEntryId(entry.id)
-    setNameDraft(entry.name)
-    setIconDraft(entry.iconKey)
-    setImageError(null)
-    setSheetOpen(true)
-  }
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const trimmed = nameDraft.trim()
-    if (!trimmed) return
-    if (editingEntry) {
-      onUpdate(editingEntry.id, trimmed, iconDraft)
-    } else {
-      onCreate(trimmed, iconDraft)
-    }
-    setSheetOpen(false)
-  }
-
-  async function handleDelete() {
-    if (!editingEntry) return
-    if (await onConfirm(`¿Eliminar "${editingEntry.name}" del catálogo de productos?`)) {
-      onDelete(editingEntry.id)
-      setSheetOpen(false)
-    }
-  }
-
-  async function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file || !editingEntry) return
-    setUploadingImage(true)
-    setImageError(null)
-    try {
-      await onUploadImage(editingEntry.id, file)
-    } catch (err) {
-      setImageError(describeUploadError(err))
-    } finally {
-      setUploadingImage(false)
-    }
+  async function handleDelete(entry: ProductCatalogEntry) {
+    const confirmed = await confirmDialog({
+      title: `¿Eliminar «${entry.name}»?`,
+      message: 'Dejará de sugerirse su imagen al agregar ítems con ese nombre.',
+    })
+    if (confirmed) onDelete(entry.id)
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Productos</h1>
-        <p className={styles.subtitle}>El ícono que se sugiere automáticamente al escribir un ítem</p>
+    <div className="page page-with-fab">
+      <header className="page-header">
+        <h1 className="page-title">Productos</h1>
+        <p className="page-subtitle">La imagen que se muestra sola cuando agregas un ítem con ese nombre.</p>
       </header>
 
-      {catalog.length > 5 && (
-        <input
-          className={styles.searchInput}
-          type="search"
-          placeholder="Buscar producto…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Buscar producto"
-        />
+      {catalog.length > 8 && (
+        <label className="search">
+          <Icon name="search" size={18} />
+          <input
+            className="input"
+            type="search"
+            placeholder="Buscar producto"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Buscar producto"
+          />
+        </label>
       )}
 
       {loading ? (
         <SkeletonList count={4} />
       ) : catalog.length === 0 ? (
-        <div className={styles.empty}>
-          <Icon name="tag" size={40} className={styles.emptyIcon} />
-          <p>Todavía no tienes productos.</p>
+        <div className="empty">
+          <div className="empty-art">🧺</div>
+          <p className="empty-title">Sin productos</p>
+          <p>Agrega productos para que tus ítems tengan imagen automáticamente.</p>
+          <button type="button" className="btn btn-accent" onClick={() => setSheet('new')}>
+            <Icon name="plus" size={18} />
+            Nuevo producto
+          </button>
         </div>
       ) : filteredCatalog.length === 0 ? (
-        <div className={styles.empty}>
-          <p>Ningún producto coincide con "{query}".</p>
+        <div className="empty">
+          <p className="empty-title">Sin resultados</p>
+          <p>Ningún producto coincide con «{query}».</p>
         </div>
       ) : (
-        <ul className={styles.list}>
+        <ul className={styles.grid}>
           {filteredCatalog.map((entry) => (
-            <li key={entry.id} className={styles.row}>
-              <button className={styles.rowButton} onClick={() => openEditSheet(entry)}>
-                {entry.imageUrl ? (
-                  <img src={entry.imageUrl} alt="" className={styles.rowImg} />
-                ) : (
-                  <ProductIcon iconKey={entry.iconKey} size={40} className={styles.rowIcon} />
-                )}
-                <span className={styles.rowName}>{entry.name}</span>
+            <li key={entry.id}>
+              <button type="button" className={styles.tile} onClick={() => setSheet(entry.id)}>
+                <span className={styles.tileImage}>
+                  {entry.imageUrl ? (
+                    <img src={entry.imageUrl} alt="" loading="lazy" decoding="async" className={styles.tilePhoto} />
+                  ) : (
+                    <ProductIcon iconKey={entry.iconKey} size={52} />
+                  )}
+                </span>
+                <span className={styles.tileName}>{entry.name}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
 
-      <div className={styles.fabLayer}>
-        <button className={styles.fab} onClick={openCreateSheet} aria-label="Agregar producto">
-          <Icon name="plus" size={26} />
-        </button>
-      </div>
-
-      {sheetOpen && (
-        <div className={styles.sheetOverlay} onClick={() => setSheetOpen(false)}>
-          <form className={styles.sheet} onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-            <div className={styles.sheetHandle} />
-            <h2 className={styles.sheetTitle}>{editingEntry ? 'Editar producto' : 'Nuevo producto'}</h2>
-            <input
-              className={styles.input}
-              type="text"
-              placeholder="Nombre del producto (ej: kiwi)"
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              autoFocus
-            />
-
-            {editingEntry && (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  disabled={uploadingImage}
-                  hidden
-                />
-                <button
-                  type="button"
-                  className={styles.uploadButton}
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingImage}
-                >
-                  <Icon name="upload" size={16} />
-                  {uploadingImage ? 'Subiendo…' : editingEntry.imageUrl ? 'Cambiar foto' : 'Subir una foto'}
-                </button>
-                {imageError && <p className={styles.imageError}>{imageError}</p>}
-                {editingEntry.imageUrl && (
-                  <button
-                    type="button"
-                    className={styles.removePhotoButton}
-                    onClick={() => onRemoveImage(editingEntry.id)}
-                  >
-                    Quitar foto y usar ícono
-                  </button>
-                )}
-              </>
-            )}
-
-            <p className={styles.iconLabel}>{editingEntry?.imageUrl ? 'O elige un ícono' : 'Elige un ícono'}</p>
-            <div className={styles.iconGrid}>
-              {ALL_ICON_KEYS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`${styles.iconGridOption} ${option === iconDraft ? styles.iconGridOptionSelected : ''}`}
-                  onClick={() => setIconDraft(option)}
-                  aria-label={`Usar ícono ${option}`}
-                  aria-pressed={option === iconDraft}
-                >
-                  <ProductIcon iconKey={option} size={24} />
-                </button>
-              ))}
-            </div>
-            {editingEntry && (
-              <button type="button" className={styles.deleteButton} onClick={handleDelete}>
-                Eliminar producto
-              </button>
-            )}
-            <div className={styles.sheetActions}>
-              <button type="button" className={styles.sheetCancelButton} onClick={() => setSheetOpen(false)}>
-                Cancelar
-              </button>
-              <button className={styles.sheetSaveButton} type="submit" disabled={!nameDraft.trim()}>
-                {editingEntry ? 'Guardar' : 'Crear'}
-              </button>
-            </div>
-          </form>
+      {catalog.length > 0 && (
+        <div className="fab-layer">
+          <button type="button" className="fab fab-above-tabs" onClick={() => setSheet('new')}>
+            <Icon name="plus" size={22} />
+            Nuevo
+          </button>
         </div>
       )}
+
+      {sheet === 'new' && (
+        <ProductSheet
+          nameTaken={(name) => nameTaken(name)}
+          onSave={onCreate}
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {editing && (
+        <ProductSheet
+          key={editing.id}
+          entry={editing}
+          nameTaken={(name) => nameTaken(name, editing.id)}
+          onSave={(name, iconKey) => onUpdate(editing.id, name, iconKey)}
+          onDelete={() => void handleDelete(editing)}
+          onUploadImage={(file) => onUploadImage(editing.id, file)}
+          onRemoveImage={() => onRemoveImage(editing.id)}
+          onClose={() => setSheet(null)}
+        />
+      )}
     </div>
+  )
+}
+
+interface ProductSheetProps {
+  entry?: ProductCatalogEntry
+  nameTaken: (name: string) => boolean
+  onSave: (name: string, iconKey: string) => void
+  onDelete?: () => void
+  onUploadImage?: (file: File) => Promise<void>
+  onRemoveImage?: () => void
+  onClose: () => void
+}
+
+function ProductSheet({ entry, nameTaken, onSave, onDelete, onUploadImage, onRemoveImage, onClose }: ProductSheetProps) {
+  const [name, setName] = useState(entry?.name ?? '')
+  const [iconKey, setIconKey] = useState(entry?.iconKey ?? ALL_ICON_KEYS[0])
+  const [uploading, setUploading] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const trimmed = name.trim()
+  const duplicate = trimmed !== '' && nameTaken(trimmed)
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!trimmed || duplicate) return
+    onSave(trimmed, iconKey)
+    onClose()
+  }
+
+  async function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !onUploadImage) return
+    setUploading(true)
+    setImageError(null)
+    try {
+      await onUploadImage(file)
+    } catch (err) {
+      setImageError(describeUploadError(err))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <BottomSheet title={entry ? 'Editar producto' : 'Nuevo producto'} onClose={onClose}>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <div className={styles.nameRow}>
+          <span className={`${styles.preview} ${uploading ? styles.previewUploading : ''}`}>
+            {entry?.imageUrl ? (
+              <img src={entry.imageUrl} alt="" className={styles.tilePhoto} />
+            ) : (
+              <ProductIcon iconKey={iconKey} size={40} />
+            )}
+          </span>
+          <input
+            className="input"
+            type="text"
+            placeholder="Nombre (ej: kiwi)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+            enterKeyHint="done"
+            aria-label="Nombre del producto"
+            aria-invalid={duplicate}
+            autoFocus={!entry}
+          />
+        </div>
+        {duplicate && (
+          <p className={styles.error} role="alert">
+            Ya tienes un producto con ese nombre.
+          </p>
+        )}
+
+        {entry && onUploadImage && (
+          <div className={styles.photoActions}>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} hidden />
+            <button type="button" className="chip" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <Icon name="camera" size={16} />
+              {uploading ? 'Subiendo…' : entry.imageUrl ? 'Cambiar foto' : 'Subir foto propia'}
+            </button>
+            {entry.imageUrl && !uploading && (
+              <button type="button" className="chip" onClick={onRemoveImage}>
+                Quitar foto
+              </button>
+            )}
+          </div>
+        )}
+        {imageError && (
+          <p className={styles.error} role="alert">
+            {imageError}
+          </p>
+        )}
+
+        <div className="field">
+          <span className="field-label">{entry?.imageUrl ? 'Ícono de respaldo' : 'Ícono'}</span>
+          <ProductIconGrid value={iconKey} onChange={setIconKey} />
+        </div>
+
+        <div className="btn-row">
+          {onDelete && (
+            <button
+              type="button"
+              className="btn btn-danger-soft"
+              onClick={() => {
+                onClose()
+                onDelete()
+              }}
+            >
+              <Icon name="trash" size={18} />
+              Eliminar
+            </button>
+          )}
+          <button type="submit" className="btn btn-primary" disabled={!trimmed || duplicate}>
+            {entry ? 'Guardar' : 'Crear'}
+          </button>
+        </div>
+      </form>
+    </BottomSheet>
   )
 }

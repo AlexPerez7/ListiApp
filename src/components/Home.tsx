@@ -1,6 +1,10 @@
-import { memo, useCallback, useMemo, useState, type FormEvent } from 'react'
+import { memo, useMemo, useState, type FormEvent } from 'react'
 import type { ShoppingList } from '../types'
+import type { CatalogIcon } from '../lib/productCatalog'
+import { pluralize } from '../lib/format'
+import { ActionSheet, BottomSheet } from './BottomSheet'
 import { Icon } from './Icon'
+import { ItemThumb } from './ItemThumb'
 import { Logo } from './Logo'
 import { SkeletonList } from './Skeleton'
 import styles from './Home.module.css'
@@ -8,205 +12,358 @@ import styles from './Home.module.css'
 interface HomeProps {
   lists: ShoppingList[]
   loading: boolean
+  productCatalog: Map<string, CatalogIcon>
   onCreateList: (name: string) => void
   onSelectList: (id: string) => void
-  onDuplicateList: (id: string) => void
-  onDeleteList: (id: string) => void
-  onToggleTemplate: (id: string) => void
-  onUseTemplate: (id: string) => void
-  onConfirm: (message: string) => Promise<boolean>
+  onRenameList: (id: string, name: string) => void
+  onDuplicateList: (list: ShoppingList) => void
+  onDeleteList: (list: ShoppingList) => void
+  onToggleTemplate: (list: ShoppingList) => void
+  onUseTemplate: (list: ShoppingList) => void
 }
+
+const NAME_IDEAS = ['Súper semanal', 'Feria', 'Farmacia', 'Asado', 'Cumpleaños', 'Ferretería']
+const SEARCH_MIN_LISTS = 6
+const PREVIEW_THUMBS = 5
 
 export function Home({
   lists,
   loading,
+  productCatalog,
   onCreateList,
   onSelectList,
+  onRenameList,
   onDuplicateList,
   onDeleteList,
   onToggleTemplate,
   onUseTemplate,
-  onConfirm,
 }: HomeProps) {
-  const [name, setName] = useState('')
   const [query, setQuery] = useState('')
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const trimmed = name.trim()
-    if (!trimmed) return
-    onCreateList(trimmed)
-    setName('')
-  }
-
-  const handleSelectList = useCallback((id: string) => onSelectList(id), [onSelectList])
-  const handleDuplicateList = useCallback((id: string) => onDuplicateList(id), [onDuplicateList])
-  const handleDeleteList = useCallback((id: string) => onDeleteList(id), [onDeleteList])
-  const handleToggleTemplate = useCallback((id: string) => onToggleTemplate(id), [onToggleTemplate])
-  const handleUseTemplate = useCallback((id: string) => onUseTemplate(id), [onUseTemplate])
+  const [creating, setCreating] = useState(false)
+  const [menuListId, setMenuListId] = useState<string | null>(null)
+  const [renamingListId, setRenamingListId] = useState<string | null>(null)
 
   const filteredLists = useMemo(() => {
-    const trimmed = query.trim().toLowerCase()
-    if (!trimmed) return lists
-    return lists.filter((list) => list.name.toLowerCase().includes(trimmed))
+    const needle = query.trim().toLowerCase()
+    if (!needle) return lists
+    return lists.filter((list) => list.name.toLowerCase().includes(needle))
   }, [lists, query])
 
   const templates = useMemo(() => filteredLists.filter((list) => list.isTemplate), [filteredLists])
   const regularLists = useMemo(() => filteredLists.filter((list) => !list.isTemplate), [filteredLists])
+  const allTemplates = useMemo(() => lists.filter((list) => list.isTemplate), [lists])
+
+  const menuList = lists.find((list) => list.id === menuListId)
+  const renamingList = lists.find((list) => list.id === renamingListId)
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.brand}>
-          <Logo size={36} className={styles.logo} />
-          <div>
-            <h1 className={styles.title}>ListiApp</h1>
-            <p className={styles.subtitle}>Tus listas de compras</p>
-          </div>
+    <div className="page page-with-fab">
+      <header className={styles.brand}>
+        <Logo size={44} className={styles.logo} />
+        <div>
+          <h1 className="page-title">Mis listas</h1>
+          <p className="page-subtitle">
+            {lists.length === 0 ? 'Tus compras, siempre a mano' : summary(lists)}
+          </p>
         </div>
       </header>
 
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <input
-          className={styles.input}
-          type="text"
-          placeholder="Nueva lista (ej: Súper semanal)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button className={styles.addButton} type="submit" disabled={!name.trim()} aria-label="Crear lista">
-          <Icon name="plus" size={22} />
-        </button>
-      </form>
-
-      {lists.length > 0 && (
-        <input
-          className={styles.searchInput}
-          type="search"
-          placeholder="Buscar lista…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Buscar lista"
-        />
+      {lists.length >= SEARCH_MIN_LISTS && (
+        <label className="search">
+          <Icon name="search" size={18} />
+          <input
+            className="input"
+            type="search"
+            placeholder="Buscar lista"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Buscar lista"
+          />
+        </label>
       )}
 
       {loading ? (
         <SkeletonList />
       ) : lists.length === 0 ? (
-        <div className={styles.empty}>
-          <Icon name="list" size={40} className={styles.emptyIcon} />
-          <p>Todavía no tienes listas.</p>
-          <p>Crea la primera arriba.</p>
+        <div className="empty">
+          <div className="empty-art">🛒</div>
+          <p className="empty-title">Crea tu primera lista</p>
+          <p>Anota lo que necesitas y márcalo mientras compras.</p>
+          <button type="button" className="btn btn-accent" onClick={() => setCreating(true)}>
+            <Icon name="plus" size={18} />
+            Nueva lista
+          </button>
         </div>
       ) : filteredLists.length === 0 ? (
-        <div className={styles.empty}>
-          <p>Ninguna lista coincide con "{query}".</p>
+        <div className="empty">
+          <p className="empty-title">Sin resultados</p>
+          <p>Ninguna lista coincide con «{query}».</p>
         </div>
       ) : (
         <>
+          {regularLists.length > 0 && (
+            <ul className={styles.list}>
+              {regularLists.map((list) => (
+                <ListCard
+                  key={list.id}
+                  list={list}
+                  productCatalog={productCatalog}
+                  onSelect={onSelectList}
+                  onOpenMenu={setMenuListId}
+                  onUseTemplate={onUseTemplate}
+                />
+              ))}
+            </ul>
+          )}
           {templates.length > 0 && (
-            <div className={styles.templatesSection}>
-              <p className={styles.templatesLabel}>📌 Plantillas</p>
+            <section className={styles.section}>
+              <h2 className="section-label">Plantillas</h2>
               <ul className={styles.list}>
                 {templates.map((list) => (
                   <ListCard
                     key={list.id}
                     list={list}
-                    onSelect={handleSelectList}
-                    onDuplicate={handleDuplicateList}
-                    onDelete={handleDeleteList}
-                    onToggleTemplate={handleToggleTemplate}
-                    onUseTemplate={handleUseTemplate}
-                    onConfirm={onConfirm}
+                    productCatalog={productCatalog}
+                    onSelect={onSelectList}
+                    onOpenMenu={setMenuListId}
+                    onUseTemplate={onUseTemplate}
                   />
                 ))}
               </ul>
-            </div>
+            </section>
           )}
-          <ul className={styles.list}>
-            {regularLists.map((list) => (
-              <ListCard
-                key={list.id}
-                list={list}
-                onSelect={handleSelectList}
-                onDuplicate={handleDuplicateList}
-                onDelete={handleDeleteList}
-                onToggleTemplate={handleToggleTemplate}
-                onUseTemplate={handleUseTemplate}
-                onConfirm={onConfirm}
-              />
-            ))}
-          </ul>
         </>
+      )}
+
+      {lists.length > 0 && (
+        <div className="fab-layer">
+          <button type="button" className="fab fab-above-tabs" onClick={() => setCreating(true)}>
+            <Icon name="plus" size={22} />
+            Nueva lista
+          </button>
+        </div>
+      )}
+
+      {creating && (
+        <NewListSheet
+          existingNames={lists.map((list) => list.name)}
+          templates={allTemplates}
+          onCreate={(name) => {
+            setCreating(false)
+            onCreateList(name)
+          }}
+          onUseTemplate={(list) => {
+            setCreating(false)
+            onUseTemplate(list)
+          }}
+          onClose={() => setCreating(false)}
+        />
+      )}
+
+      {menuList && (
+        <ActionSheet
+          title={menuList.name}
+          onClose={() => setMenuListId(null)}
+          actions={[
+            { label: 'Renombrar', icon: 'edit', onSelect: () => setRenamingListId(menuList.id) },
+            { label: 'Duplicar', icon: 'duplicate', onSelect: () => onDuplicateList(menuList) },
+            {
+              label: menuList.isTemplate ? 'Quitar de plantillas' : 'Guardar como plantilla',
+              icon: 'bookmark',
+              onSelect: () => onToggleTemplate(menuList),
+            },
+            { label: 'Eliminar', icon: 'trash', danger: true, onSelect: () => onDeleteList(menuList) },
+          ]}
+        />
+      )}
+
+      {renamingList && (
+        <RenameSheet
+          title="Renombrar lista"
+          initialName={renamingList.name}
+          onSave={(name) => onRenameList(renamingList.id, name)}
+          onClose={() => setRenamingListId(null)}
+        />
       )}
     </div>
   )
 }
 
-interface ListCardProps {
-  list: ShoppingList
-  onSelect: (id: string) => void
-  onDuplicate: (id: string) => void
-  onDelete: (id: string) => void
-  onToggleTemplate: (id: string) => void
-  onUseTemplate: (id: string) => void
-  onConfirm: (message: string) => Promise<boolean>
+function summary(lists: ShoppingList[]): string {
+  const pending = lists
+    .filter((list) => !list.isTemplate)
+    .reduce((sum, list) => sum + list.items.filter((item) => !item.done).length, 0)
+  return pending === 0 ? 'No tienes compras pendientes' : `${pluralize(pending, 'ítem pendiente', 'ítems pendientes')}`
 }
 
-const ListCard = memo(function ListCard({
-  list,
-  onSelect,
-  onDuplicate,
-  onDelete,
-  onToggleTemplate,
-  onUseTemplate,
-  onConfirm,
-}: ListCardProps) {
+interface ListCardProps {
+  list: ShoppingList
+  productCatalog: Map<string, CatalogIcon>
+  onSelect: (id: string) => void
+  onOpenMenu: (id: string) => void
+  onUseTemplate: (list: ShoppingList) => void
+}
+
+const ListCard = memo(function ListCard({ list, productCatalog, onSelect, onOpenMenu, onUseTemplate }: ListCardProps) {
   const total = list.items.length
-  const done = useMemo(() => list.items.filter((item) => item.done).length, [list.items])
+  const done = list.items.filter((item) => item.done).length
+  const complete = total > 0 && done === total
+  const preview = (list.isTemplate ? list.items : list.items.filter((item) => !item.done)).slice(0, PREVIEW_THUMBS)
+  const previewTotal = list.isTemplate ? total : total - done
+
+  let meta: string
+  if (total === 0) meta = 'Sin ítems'
+  else if (list.isTemplate) meta = pluralize(total, 'ítem', 'ítems')
+  else if (complete) meta = '¡Todo comprado!'
+  else meta = `${done} de ${total} comprados`
 
   return (
     <li className={styles.card}>
-      <button className={styles.cardMain} onClick={() => onSelect(list.id)}>
+      <button type="button" className={styles.cardMain} onClick={() => onSelect(list.id)}>
         <span className={styles.cardName}>{list.name}</span>
-        <span className={styles.cardMeta}>
-          {list.isTemplate ? 'Plantilla' : total === 0 ? 'Sin ítems' : `${done} de ${total} comprados`}
-        </span>
+        <span className={`${styles.cardMeta} ${complete ? styles.cardMetaDone : ''}`}>{meta}</span>
+
+        {preview.length > 0 && (
+          <span className={styles.thumbs} aria-hidden="true">
+            {preview.map((item) => (
+              <span key={item.id} className={styles.thumb}>
+                <ItemThumb item={item} catalog={productCatalog} size={30} />
+              </span>
+            ))}
+            {previewTotal > preview.length && (
+              <span className={styles.thumbMore}>+{previewTotal - preview.length}</span>
+            )}
+          </span>
+        )}
+
+        {!list.isTemplate && total > 0 && (
+          <span className={styles.progress} aria-hidden="true">
+            <span
+              className={`${styles.progressFill} ${complete ? styles.progressFillDone : ''}`}
+              style={{ width: `${(done / total) * 100}%` }}
+            />
+          </span>
+        )}
       </button>
-      {list.isTemplate && (
+
+      <div className={styles.cardSide}>
         <button
-          className={styles.useTemplateButton}
-          aria-label={`Usar plantilla ${list.name}`}
-          onClick={() => onUseTemplate(list.id)}
+          type="button"
+          className="icon-btn"
+          aria-label={`Más opciones de ${list.name}`}
+          onClick={() => onOpenMenu(list.id)}
         >
-          <Icon name="reuse" size={17} />
+          <Icon name="more" size={20} />
         </button>
-      )}
-      <button
-        className={list.isTemplate ? `${styles.pinButton} ${styles.pinButtonActive}` : styles.pinButton}
-        aria-label={list.isTemplate ? `Quitar ${list.name} de plantillas` : `Marcar ${list.name} como plantilla`}
-        onClick={() => onToggleTemplate(list.id)}
-      >
-        <Icon name="bookmark" size={16} filled={list.isTemplate} />
-      </button>
-      <button
-        className={styles.duplicateButton}
-        aria-label={`Duplicar lista ${list.name}`}
-        onClick={() => onDuplicate(list.id)}
-      >
-        <Icon name="duplicate" size={17} />
-      </button>
-      <button
-        className={styles.deleteButton}
-        aria-label={`Eliminar lista ${list.name}`}
-        onClick={async () => {
-          if (await onConfirm(`¿Eliminar la lista "${list.name}"?`)) {
-            onDelete(list.id)
-          }
-        }}
-      >
-        <Icon name="close" size={17} />
-      </button>
+        {list.isTemplate && (
+          <button type="button" className={styles.useButton} onClick={() => onUseTemplate(list)}>
+            Usar
+          </button>
+        )}
+      </div>
     </li>
   )
 })
+
+interface NewListSheetProps {
+  existingNames: string[]
+  templates: ShoppingList[]
+  onCreate: (name: string) => void
+  onUseTemplate: (list: ShoppingList) => void
+  onClose: () => void
+}
+
+function NewListSheet({ existingNames, templates, onCreate, onUseTemplate, onClose }: NewListSheetProps) {
+  const [name, setName] = useState('')
+  const ideas = NAME_IDEAS.filter((idea) => !existingNames.includes(idea))
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const trimmed = name.trim()
+    if (trimmed) onCreate(trimmed)
+  }
+
+  return (
+    <BottomSheet title="Nueva lista" onClose={onClose}>
+      <form className={styles.sheetForm} onSubmit={handleSubmit}>
+        <input
+          className="input"
+          type="text"
+          placeholder="Nombre de la lista"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={80}
+          enterKeyHint="done"
+          aria-label="Nombre de la lista"
+          autoFocus
+        />
+        {ideas.length > 0 && (
+          <div className="chip-scroll">
+            {ideas.map((idea) => (
+              <button key={idea} type="button" className="chip" onClick={() => onCreate(idea)}>
+                {idea}
+              </button>
+            ))}
+          </div>
+        )}
+        <button className="btn btn-accent btn-block" type="submit" disabled={!name.trim()}>
+          Crear lista
+        </button>
+      </form>
+
+      {templates.length > 0 && (
+        <section className={styles.section}>
+          <h3 className="section-label">O parte de una plantilla</h3>
+          <div className="chip-scroll">
+            {templates.map((template) => (
+              <button key={template.id} type="button" className="chip" onClick={() => onUseTemplate(template)}>
+                <Icon name="bookmark" size={14} filled />
+                {template.name}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+    </BottomSheet>
+  )
+}
+
+interface RenameSheetProps {
+  title: string
+  initialName: string
+  onSave: (name: string) => void
+  onClose: () => void
+}
+
+export function RenameSheet({ title, initialName, onSave, onClose }: RenameSheetProps) {
+  const [name, setName] = useState(initialName)
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed) return
+    if (trimmed !== initialName) onSave(trimmed)
+    onClose()
+  }
+
+  return (
+    <BottomSheet title={title} onClose={onClose}>
+      <form className={styles.sheetForm} onSubmit={handleSubmit}>
+        <input
+          className="input"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onFocus={(e) => e.target.select()}
+          maxLength={80}
+          enterKeyHint="done"
+          aria-label="Nombre"
+          autoFocus
+        />
+        <button className="btn btn-primary btn-block" type="submit" disabled={!name.trim()}>
+          Guardar
+        </button>
+      </form>
+    </BottomSheet>
+  )
+}

@@ -28,7 +28,9 @@ export default defineConfig({
         short_name: 'ListiApp',
         description: 'Listas de compras simples, rápidas y siempre a mano.',
         theme_color: '#4CAF93',
-        background_color: '#FAFAF8',
+        background_color: '#F5F7F3',
+        lang: 'es',
+        categories: ['shopping', 'productivity'],
         display: 'standalone',
         start_url: '/',
         scope: '/',
@@ -48,9 +50,6 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,woff2}'],
         cleanupOutdatedCaches: true,
-      },
-      devOptions: {
-        enabled: true,
       },
     }),
   ],

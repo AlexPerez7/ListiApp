@@ -1,98 +1,103 @@
 .page {
   flex: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-  padding: 24px 16px;
+  gap: 22px;
+  padding: calc(32px + var(--safe-top)) 20px calc(32px + var(--safe-bottom));
+  animation: fadeIn 0.3s ease;
 }
 
-.card {
-  width: 100%;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 32px 24px;
+.hero {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
 }
 
 .logo {
-  align-self: center;
   margin-bottom: 8px;
+  border-radius: 22%;
+  box-shadow: 0 10px 28px rgba(76, 175, 147, 0.35);
 }
 
 .title {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--color-primary-dark);
-  text-align: center;
-  letter-spacing: -0.3px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .subtitle {
-  text-align: center;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-secondary);
-  margin-bottom: 20px;
+  max-width: 280px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-.input {
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  font-size: 16px;
-  color: var(--color-text);
+.passwordWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.input:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
+.passwordWrap :global(.input) {
+  padding-right: 50px;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 3px;
+}
+
+.linkButton {
+  align-self: flex-end;
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  color: var(--color-primary-strong);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.error,
+.info {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .error {
-  font-size: 13px;
-  color: #dc2626;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .info {
-  font-size: 13px;
-  color: var(--color-primary-dark);
-}
-
-.submitButton {
-  margin-top: 4px;
-  padding: 14px;
-  border-radius: var(--radius-md);
-  border: none;
-  background: var(--color-accent);
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 16px;
-  transition: background-color 0.15s ease;
-}
-
-.submitButton:active {
-  background: var(--color-accent-dark);
-}
-
-.submitButton:disabled {
-  opacity: 0.6;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
 }
 
 .divider {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 18px;
-  color: var(--color-text-secondary);
+  gap: 12px;
+  color: var(--color-text-faint);
   font-size: 13px;
 }
 
@@ -105,31 +110,13 @@
 }
 
 .googleButton {
-  margin-top: 14px;
-  padding: 13px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
   background: var(--color-surface);
-  color: var(--color-text);
+  border: 1.5px solid var(--color-border);
   font-weight: 600;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: background-color 0.15s ease;
 }
 
-.googleButton:active {
-  background: var(--color-bg);
-}
-
-.switchButton {
-  margin-top: 18px;
-  border: none;
-  background: none;
-  color: var(--color-primary-dark);
-  font-size: 14px;
-  font-weight: 600;
+.switch {
   text-align: center;
+  font-size: 14px;
+  color: var(--color-text-secondary);
 }

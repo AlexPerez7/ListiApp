@@ -6,56 +6,62 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type Modifier,
 } from '@dnd-kit/core'
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Category } from '../types'
+import type { Category, ShoppingList } from '../types'
 import { ICON_OPTIONS } from '../lib/categories'
+import { confirmDialog } from '../lib/confirm'
+import { pluralize } from '../lib/format'
+import { BottomSheet } from './BottomSheet'
 import { Icon } from './Icon'
+import { EmojiGrid } from './Pickers'
 import { SkeletonList } from './Skeleton'
 import styles from './Categories.module.css'
 
 interface CategoriesProps {
   categories: Category[]
+  lists: ShoppingList[]
   loading: boolean
   onCreate: (name: string, icon: string) => void
   onUpdate: (categoryId: string, name: string, icon: string) => void
   onDelete: (categoryId: string) => void
   onReorder: (orderedCategoryIds: string[]) => void
-  onConfirm: (message: string, confirmLabel?: string) => Promise<boolean>
 }
 
-export function Categories({ categories, loading, onCreate, onUpdate, onDelete, onReorder, onConfirm }: CategoriesProps) {
-  const [name, setName] = useState('')
-  const [icon, setIcon] = useState(ICON_OPTIONS[0])
-  const [query, setQuery] = useState('')
+const lockToVerticalAxis: Modifier = ({ transform }) => ({ ...transform, x: 0 })
+
+export function Categories({ categories, lists, loading, onCreate, onUpdate, onDelete, onReorder }: CategoriesProps) {
+  // null = cerrado, 'new' = creando, otro valor = id de la categoría en edición
+  const [sheet, setSheet] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const trimmed = name.trim()
-    if (!trimmed) return
-    onCreate(trimmed, icon)
-    setName('')
-    setIcon(ICON_OPTIONS[0])
-  }
+  const usageById = useMemo(() => {
+    const usage = new Map<string, number>()
+    for (const list of lists) {
+      for (const item of list.items) {
+        if (item.categoryId) usage.set(item.categoryId, (usage.get(item.categoryId) ?? 0) + 1)
+      }
+    }
+    return usage
+  }, [lists])
 
-  const filteredCategories = useMemo(() => {
-    const trimmed = query.trim().toLowerCase()
-    if (!trimmed) return categories
-    return categories.filter((category) => category.name.toLowerCase().includes(trimmed))
-  }, [categories, query])
-
-  const isFiltering = query.trim().length > 0
+  const editing = sheet && sheet !== 'new' ? categories.find((category) => category.id === sheet) : undefined
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
-
     const ids = categories.map((category) => category.id)
     const activeIndex = ids.indexOf(String(active.id))
     const overIndex = ids.indexOf(String(over.id))
@@ -63,81 +69,79 @@ export function Categories({ categories, loading, onCreate, onUpdate, onDelete, 
     onReorder(arrayMove(ids, activeIndex, overIndex))
   }
 
+  async function handleDelete(category: Category) {
+    const usage = usageById.get(category.id) ?? 0
+    const confirmed = await confirmDialog({
+      title: `¿Eliminar «${category.name}»?`,
+      message:
+        usage > 0
+          ? `${pluralize(usage, 'ítem quedará', 'ítems quedarán')} sin categoría.`
+          : 'Ningún ítem usa esta categoría.',
+    })
+    if (confirmed) onDelete(category.id)
+  }
+
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Categorías</h1>
-        <p className={styles.subtitle}>Organiza tus ítems por pasillo o tipo</p>
+    <div className="page page-with-fab">
+      <header className="page-header">
+        <h1 className="page-title">Categorías</h1>
+        <p className="page-subtitle">Agrupan tus ítems por pasillo. Arrástralas para ordenarlas como tu recorrido.</p>
       </header>
-
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <div className={styles.iconPicker}>
-          {ICON_OPTIONS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              className={`${styles.iconOption} ${option === icon ? styles.iconOptionSelected : ''}`}
-              onClick={() => setIcon(option)}
-              aria-label={`Usar ícono ${option}`}
-              aria-pressed={option === icon}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-        <div className={styles.formRow}>
-          <input
-            className={styles.input}
-            type="text"
-            placeholder="Nueva categoría (ej: Fiambrería)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <button className={styles.addButton} type="submit" disabled={!name.trim()}>
-            Crear
-          </button>
-        </div>
-      </form>
-
-      {categories.length > 5 && (
-        <input
-          className={styles.searchInput}
-          type="search"
-          placeholder="Buscar categoría…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Buscar categoría"
-        />
-      )}
 
       {loading ? (
         <SkeletonList count={4} />
       ) : categories.length === 0 ? (
-        <div className={styles.empty}>
-          <Icon name="tag" size={40} className={styles.emptyIcon} />
-          <p>Todavía no tienes categorías.</p>
-        </div>
-      ) : filteredCategories.length === 0 ? (
-        <div className={styles.empty}>
-          <p>Ninguna categoría coincide con "{query}".</p>
+        <div className="empty">
+          <div className="empty-art">🏷️</div>
+          <p className="empty-title">Sin categorías</p>
+          <p>Crea categorías para ordenar tus listas por pasillo.</p>
+          <button type="button" className="btn btn-accent" onClick={() => setSheet('new')}>
+            <Icon name="plus" size={18} />
+            Nueva categoría
+          </button>
         </div>
       ) : (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <SortableContext items={filteredCategories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+        <DndContext sensors={sensors} modifiers={[lockToVerticalAxis]} onDragEnd={handleDragEnd}>
+          <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
             <ul className={styles.list}>
-              {filteredCategories.map((category) => (
+              {categories.map((category) => (
                 <CategoryRow
                   key={category.id}
                   category={category}
-                  draggable={!isFiltering}
-                  onUpdate={onUpdate}
-                  onDelete={onDelete}
-                  onConfirm={onConfirm}
+                  usage={usageById.get(category.id) ?? 0}
+                  onEdit={setSheet}
                 />
               ))}
             </ul>
           </SortableContext>
         </DndContext>
+      )}
+
+      {categories.length > 0 && (
+        <div className="fab-layer">
+          <button type="button" className="fab fab-above-tabs" onClick={() => setSheet('new')}>
+            <Icon name="plus" size={22} />
+            Nueva
+          </button>
+        </div>
+      )}
+
+      {sheet === 'new' && (
+        <CategorySheet
+          title="Nueva categoría"
+          onSave={onCreate}
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {editing && (
+        <CategorySheet
+          key={editing.id}
+          title="Editar categoría"
+          category={editing}
+          onSave={(name, icon) => onUpdate(editing.id, name, icon)}
+          onDelete={() => void handleDelete(editing)}
+          onClose={() => setSheet(null)}
+        />
       )}
     </div>
   )
@@ -145,102 +149,100 @@ export function Categories({ categories, loading, onCreate, onUpdate, onDelete, 
 
 interface CategoryRowProps {
   category: Category
-  draggable: boolean
-  onUpdate: (categoryId: string, name: string, icon: string) => void
-  onDelete: (categoryId: string) => void
-  onConfirm: (message: string, confirmLabel?: string) => Promise<boolean>
+  usage: number
+  onEdit: (categoryId: string) => void
 }
 
-const CategoryRow = memo(function CategoryRow({ category, draggable, onUpdate, onDelete, onConfirm }: CategoryRowProps) {
-  const [editing, setEditing] = useState(false)
-  const [nameDraft, setNameDraft] = useState(category.name)
-  const [iconDraft, setIconDraft] = useState(category.icon)
-
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: category.id,
-    disabled: !draggable,
-  })
-  const dragStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 1 : undefined,
-  }
-
-  function startEditing() {
-    setNameDraft(category.name)
-    setIconDraft(category.icon)
-    setEditing(true)
-  }
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const trimmed = nameDraft.trim()
-    if (!trimmed) return
-    onUpdate(category.id, trimmed, iconDraft)
-    setEditing(false)
-  }
-
-  async function handleDelete() {
-    if (
-      await onConfirm(`¿Eliminar la categoría "${category.name}"? Los ítems que la usan quedarán sin categoría.`)
-    ) {
-      onDelete(category.id)
-    }
-  }
-
-  if (editing) {
-    return (
-      <li ref={setNodeRef} style={dragStyle} className={styles.card}>
-        <form className={styles.editForm} onSubmit={handleSubmit}>
-          <div className={styles.iconPicker}>
-            {ICON_OPTIONS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={`${styles.iconOption} ${option === iconDraft ? styles.iconOptionSelected : ''}`}
-                onClick={() => setIconDraft(option)}
-                aria-label={`Usar ícono ${option}`}
-                aria-pressed={option === iconDraft}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-          <div className={styles.formRow}>
-            <input
-              className={styles.input}
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className={styles.editActions}>
-            <button className={styles.editCancelButton} type="button" onClick={() => setEditing(false)}>
-              Cancelar
-            </button>
-            <button className={styles.editSaveButton} type="submit" disabled={!nameDraft.trim()}>
-              Guardar
-            </button>
-          </div>
-        </form>
-      </li>
-    )
-  }
+const CategoryRow = memo(function CategoryRow({ category, usage, onEdit }: CategoryRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category.id })
 
   return (
-    <li ref={setNodeRef} style={dragStyle} className={styles.card}>
-      {draggable && (
-        <button className={styles.dragHandle} aria-label={`Reordenar ${category.name}`} {...attributes} {...listeners}>
-          <Icon name="grip" size={16} />
-        </button>
-      )}
-      <button className={styles.cardMain} onClick={startEditing}>
-        <span className={styles.cardIcon}>{category.icon}</span>
-        <span className={styles.cardName}>{category.name}</span>
+    <li
+      ref={setNodeRef}
+      className={`${styles.row} ${isDragging ? styles.rowDragging : ''}`}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+    >
+      <button type="button" className={styles.rowMain} onClick={() => onEdit(category.id)}>
+        <span className={styles.rowIcon} aria-hidden="true">
+          {category.icon}
+        </span>
+        <span className={styles.rowText}>
+          <span className={styles.rowName}>{category.name}</span>
+          <span className={styles.rowMeta}>{usage === 0 ? 'Sin ítems' : pluralize(usage, 'ítem', 'ítems')}</span>
+        </span>
       </button>
-      <button className={styles.deleteButton} aria-label={`Eliminar categoría ${category.name}`} onClick={handleDelete}>
-        <Icon name="close" size={17} />
+      <button
+        type="button"
+        className={styles.dragHandle}
+        aria-label={`Reordenar ${category.name}`}
+        {...attributes}
+        {...listeners}
+      >
+        <Icon name="grip" size={18} />
       </button>
     </li>
   )
 })
+
+interface CategorySheetProps {
+  title: string
+  category?: Category
+  onSave: (name: string, icon: string) => void
+  onDelete?: () => void
+  onClose: () => void
+}
+
+function CategorySheet({ title, category, onSave, onDelete, onClose }: CategorySheetProps) {
+  const [name, setName] = useState(category?.name ?? '')
+  const [icon, setIcon] = useState(category?.icon ?? ICON_OPTIONS[0])
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed) return
+    onSave(trimmed, icon)
+    onClose()
+  }
+
+  return (
+    <BottomSheet title={title} onClose={onClose}>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <div className={styles.nameRow}>
+          <span className={styles.iconPreview} aria-hidden="true">
+            {icon}
+          </span>
+          <input
+            className="input"
+            type="text"
+            placeholder="Nombre (ej: Fiambrería)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={60}
+            enterKeyHint="done"
+            aria-label="Nombre de la categoría"
+            autoFocus={!category}
+          />
+        </div>
+        <EmojiGrid options={ICON_OPTIONS} value={icon} onChange={setIcon} />
+        <div className="btn-row">
+          {onDelete && (
+            <button
+              type="button"
+              className="btn btn-danger-soft"
+              onClick={() => {
+                onClose()
+                onDelete()
+              }}
+            >
+              <Icon name="trash" size={18} />
+              Eliminar
+            </button>
+          )}
+          <button type="submit" className="btn btn-primary" disabled={!name.trim()}>
+            {category ? 'Guardar' : 'Crear'}
+          </button>
+        </div>
+      </form>
+    </BottomSheet>
+  )
+}

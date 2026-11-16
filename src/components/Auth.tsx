@@ -1,53 +1,74 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { describeAuthError } from '../lib/authErrors'
+import { Icon } from './Icon'
 import { Logo } from './Logo'
 import styles from './Auth.module.css'
 
+type Mode = 'login' | 'signup' | 'forgot'
+
+const SUBTITLES: Record<Mode, string> = {
+  login: 'Inicia sesión para ver tus listas',
+  signup: 'Crea tu cuenta en segundos',
+  forgot: 'Te enviaremos un enlace para restablecer tu contraseña',
+}
+
+const SUBMIT_LABELS: Record<Mode, string> = {
+  login: 'Entrar',
+  signup: 'Crear cuenta',
+  forgot: 'Enviar enlace',
+}
+
 export function Auth() {
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
+  const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (loading) return
     setError(null)
     setInfoMessage(null)
     setLoading(true)
 
-    if (mode === 'forgot') {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
-      })
-      setLoading(false)
-      if (error) {
-        setError(error.message)
+    const address = email.trim()
+    try {
+      if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(address, {
+          redirectTo: window.location.origin,
+        })
+        if (error) setError(describeAuthError(error))
+        else setInfoMessage('Si el correo tiene una cuenta, recibirás un enlace para restablecer tu contraseña.')
         return
       }
-      setInfoMessage('Te enviamos un email con instrucciones para restablecer tu contraseña.')
-      return
-    }
 
-    const { error } =
-      mode === 'login'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password })
+      if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({ email: address, password })
+        if (error) setError(describeAuthError(error))
+        return
+      }
 
-    setLoading(false)
-
-    if (error) {
-      setError(error.message)
-      return
-    }
-
-    if (mode === 'signup') {
-      setInfoMessage('Cuenta creada. Si tu proyecto pide confirmación de email, revisa tu correo antes de entrar.')
+      const { data, error } = await supabase.auth.signUp({
+        email: address,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      })
+      if (error) setError(describeAuthError(error))
+      else if (!data.session) {
+        setInfoMessage('¡Cuenta creada! Revisa tu correo y abre el enlace de confirmación para entrar.')
+      }
+    } catch {
+      setError('No se pudo conectar. Revisa tu conexión a internet e intenta de nuevo.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  function switchMode(nextMode: 'login' | 'signup' | 'forgot') {
+  function switchMode(nextMode: Mode) {
     setMode(nextMode)
     setError(null)
     setInfoMessage(null)
@@ -59,54 +80,80 @@ export function Auth() {
       provider: 'google',
       options: { redirectTo: window.location.origin },
     })
-    if (error) setError(error.message)
+    if (error) setError(describeAuthError(error))
   }
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
-        <Logo size={56} className={styles.logo} />
+      <div className={styles.hero}>
+        <Logo size={72} className={styles.logo} />
         <h1 className={styles.title}>ListiApp</h1>
-        <p className={styles.subtitle}>
-          {mode === 'login' && 'Inicia sesión para ver tus listas'}
-          {mode === 'signup' && 'Crea una cuenta'}
-          {mode === 'forgot' && 'Recupera el acceso a tu cuenta'}
-        </p>
+        <p className={styles.subtitle}>{SUBTITLES[mode]}</p>
+      </div>
 
+      <div className={styles.card}>
         <form className={styles.form} onSubmit={handleSubmit}>
-          <input
-            className={styles.input}
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
-          {mode !== 'forgot' && (
+          <label className="field">
+            <span className="field-label">Correo electrónico</span>
             <input
-              className={styles.input}
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              minLength={6}
+              className="input"
+              type="email"
+              inputMode="email"
+              placeholder="tu@correo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              autoCapitalize="none"
               required
             />
+          </label>
+
+          {mode !== 'forgot' && (
+            <label className="field">
+              <span className="field-label">Contraseña</span>
+              <span className={styles.passwordWrap}>
+                <input
+                  className="input"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={mode === 'signup' ? 'Mínimo 6 caracteres' : 'Tu contraseña'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  className={`icon-btn ${styles.passwordToggle}`}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={showPassword}
+                >
+                  <Icon name={showPassword ? 'eyeOff' : 'eye'} size={19} />
+                </button>
+              </span>
+            </label>
           )}
 
-          {error && <p className={styles.error}>{error}</p>}
-          {infoMessage && <p className={styles.info}>{infoMessage}</p>}
+          {mode === 'login' && (
+            <button className={styles.linkButton} type="button" onClick={() => switchMode('forgot')}>
+              ¿Olvidaste tu contraseña?
+            </button>
+          )}
 
-          <button className={styles.submitButton} type="submit" disabled={loading}>
-            {loading
-              ? 'Un momento…'
-              : mode === 'login'
-                ? 'Entrar'
-                : mode === 'signup'
-                  ? 'Crear cuenta'
-                  : 'Enviar email'}
+          {error && (
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
+          )}
+          {infoMessage && (
+            <p className={styles.info} role="status">
+              {infoMessage}
+            </p>
+          )}
+
+          <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
+            {loading ? 'Un momento…' : SUBMIT_LABELS[mode]}
           </button>
         </form>
 
@@ -115,7 +162,7 @@ export function Auth() {
             <div className={styles.divider}>
               <span>o</span>
             </div>
-            <button className={styles.googleButton} type="button" onClick={handleGoogleSignIn}>
+            <button className={`btn btn-block ${styles.googleButton}`} type="button" onClick={handleGoogleSignIn}>
               <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                 <path
                   fill="#4285F4"
@@ -138,23 +185,14 @@ export function Auth() {
             </button>
           </>
         )}
-
-        {mode === 'login' && (
-          <button className={styles.switchButton} type="button" onClick={() => switchMode('forgot')}>
-            ¿Olvidaste tu contraseña?
-          </button>
-        )}
-
-        <button
-          className={styles.switchButton}
-          type="button"
-          onClick={() => switchMode(mode === 'signup' ? 'login' : mode === 'forgot' ? 'login' : 'signup')}
-        >
-          {mode === 'login' && '¿No tienes cuenta? Crea una'}
-          {mode === 'signup' && '¿Ya tienes cuenta? Inicia sesión'}
-          {mode === 'forgot' && 'Volver a iniciar sesión'}
-        </button>
       </div>
+
+      <p className={styles.switch}>
+        {mode === 'login' ? '¿No tienes cuenta?' : mode === 'signup' ? '¿Ya tienes cuenta?' : '¿Recordaste tu contraseña?'}{' '}
+        <button className={styles.linkButton} type="button" onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}>
+          {mode === 'login' ? 'Crea una' : 'Inicia sesión'}
+        </button>
+      </p>
     </div>
   )
 }

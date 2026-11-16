@@ -1,30 +1,79 @@
 import type { ShoppingList } from '../types'
+import { normalizeProductName } from './productCatalog'
 
-// Nombres de ítems ordenados por frecuencia de uso (de más a menos
-// comprado), para sugerir accesos rápidos al agregar un ítem nuevo.
-export function buildItemNameHistory(lists: ShoppingList[]): string[] {
-  const freq = new Map<string, number>()
+export interface ItemMemory {
+  /** Nombres ordenados por frecuencia de uso (de más a menos comprado). */
+  names: string[]
+  /** Última categoría usada para cada producto (por nombre normalizado). */
+  categoryByName: Map<string, string>
+}
+
+// Lo que la app "recuerda" de compras anteriores: qué se compra más seguido
+// (para sugerir accesos rápidos) y en qué categoría va cada producto (para
+// asignarla sola al volver a agregarlo).
+export function buildItemMemory(lists: ShoppingList[]): ItemMemory {
+  const freq = new Map<string, { name: string; count: number }>()
+  const categoryByName = new Map<string, { categoryId: string; createdAt: number }>()
+
   for (const list of lists) {
     for (const item of list.items) {
       const name = item.name.trim()
-      if (!name) continue
-      freq.set(name, (freq.get(name) ?? 0) + 1)
+      const key = normalizeProductName(name)
+      if (!key) continue
+
+      const entry = freq.get(key)
+      if (entry) entry.count++
+      else freq.set(key, { name, count: 1 })
+
+      if (item.categoryId) {
+        const known = categoryByName.get(key)
+        if (!known || item.createdAt > known.createdAt) {
+          categoryByName.set(key, { categoryId: item.categoryId, createdAt: item.createdAt })
+        }
+      }
     }
   }
-  return [...freq.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([name]) => name)
+
+  return {
+    names: [...freq.values()]
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'es'))
+      .map((entry) => entry.name),
+    categoryByName: new Map([...categoryByName].map(([key, value]) => [key, value.categoryId])),
+  }
 }
 
-export function matchSuggestions(history: string[], query: string, exclude: Set<string>, limit = 8): string[] {
-  const trimmed = query.trim().toLowerCase()
+function capitalize(name: string): string {
+  return name.charAt(0).toLocaleUpperCase('es') + name.slice(1)
+}
+
+/**
+ * Sugerencias al agregar un ítem: primero lo que ya se compró antes (por
+ * frecuencia) y, al escribir, también los productos del catálogo que
+ * coincidan. Excluye lo que ya está pendiente en la lista.
+ */
+export function matchSuggestions(
+  names: string[],
+  catalogNames: Iterable<string>,
+  query: string,
+  exclude: Set<string>,
+  limit = 8,
+): string[] {
+  const needle = normalizeProductName(query)
   const matches: string[] = []
-  for (const name of history) {
-    if (exclude.has(name.toLowerCase())) continue
-    if (trimmed && !name.toLowerCase().includes(trimmed)) continue
-    if (trimmed && name.toLowerCase() === trimmed) continue
+  const seen = new Set<string>()
+
+  const consider = (name: string, prefixOnly: boolean) => {
+    if (matches.length >= limit) return
+    const key = normalizeProductName(name)
+    if (seen.has(key) || exclude.has(key) || key === needle) return
+    if (needle && !(prefixOnly ? key.startsWith(needle) : key.includes(needle))) return
+    seen.add(key)
     matches.push(name)
-    if (matches.length >= limit) break
+  }
+
+  for (const name of names) consider(name, false)
+  if (needle) {
+    for (const name of catalogNames) consider(capitalize(name), true)
   }
   return matches
 }

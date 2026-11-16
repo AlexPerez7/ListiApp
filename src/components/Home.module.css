@@ -1,117 +1,19 @@
-.page {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 24px 16px 40px;
-}
-
-.header {
-  padding-top: 8px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 4px 2px 2px;
 }
 
 .logo {
   flex-shrink: 0;
+  border-radius: 24%;
 }
 
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--color-primary-dark);
-  letter-spacing: -0.3px;
-}
-
-.subtitle {
-  margin-top: 4px;
-  font-size: 15px;
-  color: var(--color-text-secondary);
-}
-
-.form {
-  display: flex;
-  gap: 8px;
-}
-
-.input {
-  flex: 1;
-  min-width: 0;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  font-size: 16px;
-  color: var(--color-text);
-  box-shadow: var(--shadow-sm);
-}
-
-.input:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-
-.addButton {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-accent);
-  color: #ffffff;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.15s ease, transform 0.1s ease;
-}
-
-.addButton:active {
-  background: var(--color-accent-dark);
-  transform: scale(0.94);
-}
-
-.addButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.searchInput {
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  font-size: 15px;
-  color: var(--color-text);
-}
-
-.searchInput:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
-}
-
-.empty {
-  text-align: center;
-  color: var(--color-text-secondary);
-  padding: 56px 16px;
+.section {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  font-size: 15px;
-}
-
-.emptyIcon {
-  color: var(--color-border);
-  margin-bottom: 8px;
+  gap: 10px;
 }
 
 .list {
@@ -120,50 +22,36 @@
   gap: 12px;
 }
 
-.templatesSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.templatesLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
 .card {
   display: flex;
   align-items: stretch;
-  background: var(--color-surface);
   border-radius: var(--radius-lg);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  animation: riseIn 0.22s ease;
+  transition: transform 0.12s ease;
 }
 
-.card:active {
-  transform: scale(0.99);
-  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--color-border);
+.card:has(.cardMain:active) {
+  transform: scale(0.985);
 }
 
 .cardMain {
   flex: 1;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 16px 18px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+  gap: 3px;
+  padding: 16px 4px 16px 18px;
+  border: none;
+  background: none;
+  text-align: left;
 }
 
 .cardName {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -171,43 +59,84 @@
 }
 
 .cardMeta {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary);
 }
 
-.useTemplateButton,
-.pinButton,
-.duplicateButton,
-.deleteButton {
-  width: 48px;
-  border: none;
-  background: none;
-  color: var(--color-text-secondary);
+.cardMetaDone {
+  color: var(--color-primary-strong);
+  font-weight: 600;
+}
+
+.thumbs {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  margin-top: 8px;
 }
 
-.deleteButton:active {
-  background: rgba(31, 41, 55, 0.05);
-  color: #dc2626;
+.thumb {
+  display: flex;
+  margin-right: -6px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 2px var(--color-surface);
 }
 
-.duplicateButton:active,
-.useTemplateButton:active {
-  background: rgba(31, 41, 55, 0.05);
-  color: var(--color-primary-dark);
-}
-
-.pinButton {
+.thumbMore {
+  margin-left: 14px;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--color-text-secondary);
 }
 
-.pinButton:active {
-  background: rgba(31, 41, 55, 0.05);
+.progress {
+  display: block;
+  height: 6px;
+  margin-top: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  overflow: hidden;
 }
 
-.pinButtonActive {
-  color: var(--color-accent);
+.progressFill {
+  display: block;
+  height: 100%;
+  min-width: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  transition: width 0.3s ease;
+}
+
+.progressFill[style*='width: 0%'] {
+  min-width: 0;
+}
+
+.progressFillDone {
+  background: var(--color-primary);
+}
+
+.cardSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 8px 8px 14px 0;
+}
+
+.useButton {
+  height: 34px;
+  margin-right: 6px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.sheetForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
