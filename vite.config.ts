@@ -19,8 +19,9 @@ export default defineConfig({
   build: {
     // Las fotos de productos (WebP, ~1-5 kB) quedan por debajo del límite de
     // inlining por defecto (4 kB) y terminarían embebidas en base64 dentro
-    // del bundle JS, perdiendo el cacheo inmutable de /assets/* (netlify.toml)
-    // y volviéndose a descargar en cada deploy aunque la foto no cambie.
+    // del bundle JS: cada deploy obligaría a descargarlas de nuevo aunque no
+    // cambien. Como archivos aparte conservan su nombre con hash y el
+    // service worker solo baja las que cambiaron.
     assetsInlineLimit: 0,
   },
   plugins: [
