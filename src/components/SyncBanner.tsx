@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { getSyncIssue, retryPendingChanges, subscribeOutbox } from '../lib/outbox'
+import { getFailedCount, getSyncIssue, retryPendingChanges, subscribeOutbox } from '../lib/outbox'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { usePendingSync } from '../hooks/usePendingSync'
 import { pluralize } from '../lib/format'
@@ -11,10 +11,11 @@ const SLOW_SYNC_MS = 2500
 
 // Franja superior que avisa cuando no hay conexión (los cambios quedan
 // guardados en el dispositivo) o cuando la sincronización está demorando.
-export function SyncBanner() {
+export function SyncBanner({ onReview }: { onReview: () => void }) {
   const online = useOnlineStatus()
   const pending = usePendingSync()
   const syncIssue = useSyncExternalStore(subscribeOutbox, getSyncIssue)
+  const failed = useSyncExternalStore(subscribeOutbox, getFailedCount)
   const [slow, setSlow] = useState(false)
   const updateAvailable = useUpdateStatus() === 'available'
   const [updateDismissed, setUpdateDismissed] = useState(false)
@@ -47,14 +48,23 @@ export function SyncBanner() {
     </div>
   )
 
-  if (syncIssue && hasPending) {
+  if (syncIssue && (hasPending || failed > 0)) {
     return (
       <div className={styles.syncBanner} role="alert">
         <Icon name="alert" size={15} />
         <span>{syncIssue}</span>
-        {online && <button type="button" className={styles.updateButton} onClick={retryPendingChanges}>Reintentar</button>}
+        {online && hasPending && <button type="button" className={styles.updateButton} onClick={retryPendingChanges}>Reintentar</button>}
+        {failed > 0 && <button type="button" className={styles.updateButton} onClick={onReview}>Revisar</button>}
       </div>
     )
+  }
+
+  if (failed > 0) {
+    return <div className={styles.syncBanner} role="alert">
+      <Icon name="alert" size={15} />
+      <span>{!online && 'Sin conexión. '}{pluralize(failed, 'cambio necesita revisión', 'cambios necesitan revisión')}. {hasPending && `${pending} pendientes de enviar.`}</span>
+      <button type="button" className={styles.updateButton} onClick={onReview}>Revisar</button>
+    </div>
   }
 
   if (!online) {

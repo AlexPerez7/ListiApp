@@ -60,14 +60,14 @@ Otros comandos:
 - `src/components/`: pantallas (`Home`, `ListDetail`, `Categories`, `Products`, `Settings`, `Auth`) y piezas compartidas (`BottomSheet`, `Overlays`, `Pickers`).
 - `src/hooks/useSyncedCollection.ts`: base de los datos sincronizados. Abre con la copia local, lee del servidor, escucha Realtime y vuelve a leer al reconectar.
 - `src/lib/outbox.ts`: cola persistente de cambios. Cada cambio se aplica primero en pantalla y luego se envía en orden; si no hay red espera y reintenta, y si el servidor lo rechaza se avisa y se recargan los datos.
-  Los errores temporales (`401`, `408`, `429` y `5xx`) conservan los cambios sin límite de intentos, con espera progresiva. El aviso permite reintentar manualmente. Los rechazos permanentes (por ejemplo, permisos `403` o datos inválidos) se notifican y se descartan; cerrar sesión con cambios pendientes también requiere confirmación.
+  Los errores temporales (`401`, `408`, `429` y `5xx`) conservan los cambios sin límite de intentos, con espera progresiva. Los rechazos permanentes se separan en Cambios por revisar, conservando su operación original sin bloquear otros envíos. Reintentar o descartar requiere confirmación. Cerrar sesión conserva la cola y la caché cuando hay cambios sin guardar, y se impide si falla su persistencia local.
 - `src/hooks/useRoute.ts`: navegación sobre el hash de la URL, para que el botón "atrás" del teléfono funcione dentro de la app.
 - `src/index.css`: sistema de diseño (colores, tipografía, botones, campos) en claro y oscuro.
 
 ## Respaldos
 
 - Los nuevos archivos usan el formato 3: listas con presupuestos, cantidades numéricas, unidades y precios unitarios, categorías ordenadas, catálogo personal, tema, moneda, fotos recordadas y copias de las imágenes subidas. Las imágenes predeterminadas pertenecen a la app y no se duplican en el archivo.
-- La exportación requiere conexión y una cola sincronizada. Lee todos los datos por páginas; si una foto no puede descargarse, avisa y no genera un respaldo incompleto.
+- La exportación requiere conexión y una cola sincronizada, sin cambios pendientes de revisión. Lee todos los datos por páginas; si una foto no puede descargarse, avisa y no genera un respaldo incompleto. El respaldo del servidor no reemplaza la copia local de los cambios que todavía no se guardaron.
 - Se siguen aceptando respaldos de formatos 1 y 2. El formato 1 solo tenía listas y enlaces de fotos: no puede recuperar un archivo que ya no exista. Los precios sin `unitPrice` siguen siendo totales; nunca se multiplican al importar.
 - La importación agrega listas y categorías/productos que falten, conserva los existentes con el mismo nombre y aplica tema/moneda del archivo. Sube copias nuevas de las fotos a la cuenta actual. Repetir una importación duplica las listas.
 - Límite del archivo: 25 MB; cada foto embebida admite hasta aproximadamente 1 MB. Importar fotos requiere conexión.
@@ -89,6 +89,16 @@ node scripts/generate-icons.mjs
 ```
 
 ## Deploy
+
+### Versión 1.5.0
+
+- Los cambios rechazados quedan guardados por cuenta en el mismo dispositivo. Se revisan desde el aviso superior o Ajustes → Revisar cambios. Pueden reintentarse individualmente o todos juntos, en su orden original; los rechazos no vuelven a enviarse sin una acción explícita.
+- Reintentar vuelve a enviar los valores originales y puede reemplazar ediciones posteriores del mismo dato: la app lo explica antes de confirmar. Descartar elimina únicamente la copia del cambio rechazado, sin borrar datos del servidor.
+- Una edición por ID que ya no encuentra su registro se conserva como conflicto, en vez de anunciar un guardado exitoso. Las operaciones idempotentes en grupo y los borrados de registros ya ausentes siguen siendo válidos.
+- Cerrar sesión con cambios sin guardar conserva su copia local y los recupera al entrar en la misma cuenta desde ese navegador. No aparecen en otras cuentas ni se transfieren a otro dispositivo. Si localStorage falla, se bloquea la salida y se pide mantener la app abierta hasta sincronizar. Borrar los datos del navegador elimina esas copias locales.
+- La limpieza de fotos comprueba también las referencias del propio registro, del catálogo y de las fotos recordadas. Un cambio fallido no habilita el borrado de un archivo que el servidor todavía utiliza.
+- No requiere migraciones de Supabase. Acepta las colas locales anteriores sin identificadores.
+- Si hay rechazos por revisar, no degradar a versiones anteriores a 1.5.0: esas versiones podían descartar rechazos. Ante una regresión, conservar intacta la cola local y publicar una corrección; resolver los rechazos antes de considerar una reversión a un cliente antiguo.
 
 ### Versión 1.4.0
 

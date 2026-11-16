@@ -302,7 +302,7 @@ export function useShoppingLists(userId: string) {
 
   function deleteList(listId: string) {
     setLists((prev) => prev.filter((list) => list.id !== listId))
-    enqueue('eliminar la lista', { kind: 'delete', table: 'lists', match: { id: listId } })
+    enqueue(`eliminar la lista «${lists.find((list) => list.id === listId)?.name ?? 'Lista'}»`, { kind: 'delete', table: 'lists', match: { id: listId } })
   }
 
   function updateListName(listId: string, name: string) {
@@ -397,7 +397,7 @@ export function useShoppingLists(userId: string) {
     if (!item) return
     const done = !item.done
     updateItemLocal(listId, itemId, (current) => ({ ...current, done }))
-    enqueue('actualizar el ítem', { kind: 'update', table: 'items', values: { done }, match: { id: itemId } })
+    enqueue(`actualizar «${item.name}»`, { kind: 'update', table: 'items', values: { done }, match: { id: itemId } })
   }
 
   function uncheckAll(listId: string) {
@@ -429,7 +429,7 @@ export function useShoppingLists(userId: string) {
 
   function deleteItem(listId: string, itemId: string) {
     updateList(listId, (list) => ({ ...list, items: list.items.filter((item) => item.id !== itemId) }))
-    enqueue('eliminar el ítem', { kind: 'delete', table: 'items', match: { id: itemId } })
+    enqueue(`eliminar «${findItem(listId, itemId)?.name ?? 'Ítem'}»`, { kind: 'delete', table: 'items', match: { id: itemId } })
   }
 
   /** Elimina los ítems comprados y los devuelve, para poder deshacer. */

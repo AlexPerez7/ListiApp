@@ -1,4 +1,5 @@
-import { useRef, type ChangeEvent } from 'react'
+import { useRef, useSyncExternalStore, type ChangeEvent } from 'react'
+import { getFailedCount, subscribeOutbox } from '../lib/outbox'
 import { CURRENCIES, setCurrency, setTheme, usePrefs, type ThemePref } from '../lib/prefs'
 import { pluralize } from '../lib/format'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -14,6 +15,7 @@ interface SettingsProps {
   onExport: () => void
   onImport: (file: File) => void
   onSignOut: () => void
+  onReviewSync: () => void
 }
 
 const THEMES: { value: ThemePref; label: string }[] = [
@@ -22,10 +24,11 @@ const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'dark', label: 'Oscuro' },
 ]
 
-export function Settings({ email, backupBusy, backupStatus, onExport, onImport, onSignOut }: SettingsProps) {
+export function Settings({ email, backupBusy, backupStatus, onExport, onImport, onSignOut, onReviewSync }: SettingsProps) {
   const { theme, currency } = usePrefs()
   const online = useOnlineStatus()
   const pending = usePendingSync()
+  const failed = useSyncExternalStore(subscribeOutbox, getFailedCount)
   const updateStatus = useUpdateStatus()
   const importInputRef = useRef<HTMLInputElement>(null)
 
@@ -35,7 +38,7 @@ export function Settings({ email, backupBusy, backupStatus, onExport, onImport, 
     if (file) onImport(file)
   }
 
-  const syncText = !online
+  const syncText = failed > 0 ? `${pluralize(failed, 'cambio por revisar', 'cambios por revisar')}${pending > 0 ? ` · ${pending} por enviar` : ''}` : !online
     ? pending > 0
       ? `Sin conexión · ${pluralize(pending, 'cambio pendiente', 'cambios pendientes')}`
       : 'Sin conexión'
@@ -55,10 +58,11 @@ export function Settings({ email, backupBusy, backupStatus, onExport, onImport, 
         </span>
         <div className={styles.accountText}>
           <p className={styles.accountEmail}>{email ?? 'Tu cuenta'}</p>
-          <p className={`${styles.accountSync} ${online && pending === 0 ? styles.accountSyncOk : ''}`}>
+          <p className={`${styles.accountSync} ${online && pending === 0 && failed === 0 ? styles.accountSyncOk : ''}`}>
             <span className={styles.syncDot} />
             {syncText}
           </p>
+          {failed > 0 && <button type="button" className="chip" onClick={onReviewSync}>Revisar cambios</button>}
         </div>
       </section>
 
@@ -105,11 +109,11 @@ export function Settings({ email, backupBusy, backupStatus, onExport, onImport, 
       <section className={styles.group}>
         <h2 className="section-label">Tus datos</h2>
         <div className={styles.card}>
-          <button type="button" className={styles.row} onClick={onExport} disabled={backupBusy || !online || pending > 0}>
+          <button type="button" className={styles.row} onClick={onExport} disabled={backupBusy || !online || pending > 0 || failed > 0}>
             <Icon name="download" size={20} />
             <span className={styles.rowLabel}>
               Exportar respaldo
-              <small>{!online ? 'Necesitas conexión para incluir todas las fotos' : pending > 0 ? 'Espera a que se sincronicen los cambios' : 'Listas, categorías, productos, preferencias y fotos'}</small>
+              <small>{!online ? 'Necesitas conexión para incluir todas las fotos' : failed > 0 ? 'Revisa los cambios rechazados antes de exportar' : pending > 0 ? 'Espera a que se sincronicen los cambios' : 'Listas, categorías, productos, preferencias y fotos'}</small>
             </span>
             <Icon name="chevronRight" size={18} className={styles.chevron} />
           </button>

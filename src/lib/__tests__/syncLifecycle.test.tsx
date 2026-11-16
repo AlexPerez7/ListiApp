@@ -4,11 +4,16 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const db = vi.hoisted(() => ({ rows: [] as { id: string; name: string }[], writes: 0,
+  failNext: undefined as number | undefined, broadcast: true,
   listeners: new Set<(payload: unknown) => void>() }))
 vi.mock('../supabaseClient', () => ({ supabase: {
   from: () => ({ upsert: async (row: { id: string; name: string }) => {
+    if (db.failNext) {
+      const status = db.failNext; db.failNext = undefined
+      return { error: { message: 'rechazado' }, status }
+    }
     db.writes++; db.rows = [...db.rows.filter((entry) => entry.id !== row.id), row]
-    for (const listener of db.listeners) listener({ eventType: 'INSERT', new: row })
+    if (db.broadcast) for (const listener of db.listeners) listener({ eventType: 'INSERT', new: row })
     return { error: null, status: 200 }
   } }),
   channel: () => {
@@ -44,8 +49,27 @@ afterEach(async () => {
   root = undefined; outbox.setOutboxUser(null); localStorage.clear(); document.body.innerHTML = ''
   vi.restoreAllMocks()
   vi.useRealTimers()
+  db.broadcast = true; db.failNext = undefined
 })
 describe('ciclo de sincronización', () => {
+  it('recupera la vista tras reintentar un rechazo aunque no lleguen eventos Realtime', async () => {
+    vi.useFakeTimers()
+    db.rows = []; db.writes = 0; db.broadcast = false; localStorage.clear()
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    outbox.setOutboxUser('u1')
+    host = document.createElement('div'); document.body.appendChild(host); root = createRoot(host)
+    await act(async () => root!.render(<Screen />))
+    db.failNext = 403
+    await act(async () => host.querySelector('button')!.click())
+    await act(async () => vi.advanceTimersByTimeAsync(500))
+    expect(host.textContent).not.toContain('Compra sin conexión')
+    expect(outbox.getFailedCount()).toBe(1)
+    await act(async () => outbox.retryFailedChanges([outbox.getFailedChanges()[0].id]))
+    await act(async () => vi.advanceTimersByTimeAsync(500))
+    expect(host.textContent).toContain('Compra sin conexión')
+    expect(outbox.getFailedCount()).toBe(0)
+    expect(db.writes).toBe(1)
+  })
   it('actualiza dos vistas del mismo usuario tras enviar y recibir el eco de Realtime', async () => {
     vi.useFakeTimers()
     db.rows = []; db.writes = 0; localStorage.clear()

@@ -61,7 +61,8 @@ export async function uploadItemImage(userId: string, itemId: string, file: File
 
 // Borra la foto de un item de Storage, pero solo si el item es el dueño del
 // archivo (no una copia duplicada de otro item), ningún otro item la sigue
-// usando (duplicateList copia el image_url de items ya duplicados sin subir
+// usando (incluido el propio ítem si su borrado/actualización falló;
+// duplicateList copia el image_url de items ya duplicados sin subir
 // un archivo propio, así que varios items pueden apuntar al mismo path), y
 // no quedó guardada como la foto recordada de ese producto (ver
 // lib/productPhotos.ts) para autocompletar próximas compras.
@@ -70,9 +71,10 @@ export async function deleteItemImage(userId: string, itemId: string, imageUrl: 
   const path = `${userId}/${itemId}.jpg`
   if (!imageUrl.includes(path)) return
 
-  const [itemsResult, photosResult] = await Promise.all([
-    supabase.from('items').select('id', { count: 'exact', head: true }).neq('id', itemId).like('image_url', `%${path}%`),
+  const [itemsResult, photosResult, catalogResult] = await Promise.all([
+    supabase.from('items').select('id', { count: 'exact', head: true }).like('image_url', `%${path}%`),
     supabase.from('product_photos').select('id', { count: 'exact', head: true }).like('image_url', `%${path}%`),
+    supabase.from('product_catalog').select('id', { count: 'exact', head: true }).like('image_url', `%${path}%`),
   ])
 
   if (itemsResult.error) {
@@ -83,7 +85,7 @@ export async function deleteItemImage(userId: string, itemId: string, imageUrl: 
     console.error('deleteItemImage product_photos count error', { path, error: photosResult.error })
     return
   }
-  if ((itemsResult.count ?? 0) > 0 || (photosResult.count ?? 0) > 0) return
+  if (catalogResult.error || (itemsResult.count ?? 0) > 0 || (photosResult.count ?? 0) > 0 || (catalogResult.count ?? 0) > 0) return
 
   const { error } = await supabase.storage.from('item-images').remove([path])
   if (error) console.error('deleteItemImage error', { path, error })
@@ -111,6 +113,10 @@ export async function deleteCatalogImage(userId: string, entryId: string, imageU
   if (!imageUrl) return
   const path = `${userId}/catalog/${entryId}.jpg`
   if (!imageUrl.includes(path)) return
+
+  const references = await Promise.all(['product_catalog', 'items', 'product_photos'].map((table) =>
+    supabase.from(table).select('id', { count: 'exact', head: true }).like('image_url', `%${path}%`)))
+  if (references.some((result) => result.error || (result.count ?? 0) > 0)) return
 
   const { error } = await supabase.storage.from('item-images').remove([path])
   if (error) console.error('deleteCatalogImage error', { path, error })

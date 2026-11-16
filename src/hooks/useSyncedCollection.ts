@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { readCache, writeCache } from '../lib/cache'
-import { getOutboxVersion, getPendingCount, onOutboxError, subscribeOutbox, whenOutboxIdle } from '../lib/outbox'
+import { getOutboxUser, getOutboxVersion, getPendingCount, onOutboxError, onOutboxRecovery, subscribeOutbox, whenOutboxIdle } from '../lib/outbox'
 
 type DbRow = Record<string, unknown>
 export type RealtimePayload = RealtimePostgresChangesPayload<DbRow>
@@ -54,10 +54,10 @@ export function useSyncedCollection<T>(options: Options<T>) {
   const runFetch = useCallback(async () => {
     for (let attempt = 0; attempt < 3; attempt++) {
       await whenOutboxIdle()
-      if (!activeRef.current) return
+      if (!activeRef.current || getOutboxUser() !== userId) return
       const versionAtStart = getOutboxVersion()
       let rows = await optionsRef.current.fetchAll()
-      if (!activeRef.current || rows === null) return
+      if (!activeRef.current || getOutboxUser() !== userId || rows === null) return
       // Hubo cambios locales mientras leíamos: esta lectura ya está obsoleta.
       if (versionAtStart !== getOutboxVersion() || getPendingCount() > 0) continue
 
@@ -65,7 +65,7 @@ export function useSyncedCollection<T>(options: Options<T>) {
         firstFetchDoneRef.current = true
         if (optionsRef.current.afterFirstFetch) {
           rows = await optionsRef.current.afterFirstFetch(rows)
-          if (!activeRef.current) return
+          if (!activeRef.current || getOutboxUser() !== userId) return
         }
       }
       missedEventsRef.current = false
@@ -73,7 +73,7 @@ export function useSyncedCollection<T>(options: Options<T>) {
       setData(rows)
       return
     }
-  }, [])
+  }, [userId])
 
   // Las lecturas simultáneas comparten una sola petición.
   const refetch = useCallback((): Promise<void> => {
@@ -95,6 +95,7 @@ export function useSyncedCollection<T>(options: Options<T>) {
         'postgres_changes',
         { event: '*', schema: 'public', table: source.table },
         (payload) => {
+          if (getOutboxUser() !== userId) return
           // Con cambios propios en vuelo, el eco del servidor puede llegar
           // desordenado y revertir lo que se ve: lo saltamos y releemos al terminar.
           if (getPendingCount() > 0) {
@@ -117,6 +118,7 @@ export function useSyncedCollection<T>(options: Options<T>) {
       if (getPendingCount() === 0 && missedEventsRef.current) refetchSoon()
     })
     const unsubscribeErrors = onOutboxError(refetchSoon)
+    const unsubscribeRecovery = onOutboxRecovery(refetchSoon)
 
     const onVisible = () => {
       if (document.visibilityState === 'visible' && Date.now() - lastFetchRef.current > REFRESH_THROTTLE_MS) {
@@ -131,11 +133,12 @@ export function useSyncedCollection<T>(options: Options<T>) {
       window.clearTimeout(debounce)
       unsubscribeOutbox()
       unsubscribeErrors()
+      unsubscribeRecovery()
       window.removeEventListener('online', refetchSoon)
       document.removeEventListener('visibilitychange', onVisible)
       void supabase.removeChannel(channel)
     }
-  }, [name, refetch])
+  }, [name, refetch, userId])
 
   return { data, setData: setData as Dispatch<SetStateAction<T[]>>, loading, refetch }
 }

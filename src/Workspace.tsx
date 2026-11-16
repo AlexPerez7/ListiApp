@@ -14,7 +14,7 @@ import { embedBackupImages, restoreBackupImages } from './lib/backupImages'
 import { readAllPages } from './lib/pagination'
 import { CURRENCIES, setCurrency, setTheme, usePrefs } from './lib/prefs'
 import { clearCache } from './lib/cache'
-import { clearOutbox, enqueue, getOutboxVersion, getPendingCount, onOutboxError } from './lib/outbox'
+import { enqueue, getFailedCount, getOutboxUser, getOutboxVersion, getPendingCount, onOutboxError, saveOutbox, whenOutboxIdle } from './lib/outbox'
 import { showToast } from './lib/toast'
 import { confirmDialog } from './lib/confirm'
 import { pluralize } from './lib/format'
@@ -32,6 +32,7 @@ const Categories = lazy(() => import('./components/Categories').then((module) =>
 const Products = lazy(() => import('./components/Products').then((module) => ({ default: module.Products })))
 const ListDetail = lazy(() => import('./components/ListDetail').then((module) => ({ default: module.ListDetail })))
 const Settings = lazy(() => import('./components/Settings').then((module) => ({ default: module.Settings })))
+const SyncRecoverySheet = lazy(() => import('./components/SyncRecoverySheet').then((module) => ({ default: module.SyncRecoverySheet })))
 
 export default function Workspace({ user }: { user: User }) {
   const userId = user.id
@@ -43,6 +44,7 @@ export default function Workspace({ user }: { user: User }) {
   }, [])
   const [backupBusy, setBackupBusy] = useState(false)
   const [backupStatus, setBackupStatus] = useState('')
+  const [reviewingSync, setReviewingSync] = useState(false)
   const { route, openList, closeList, setTab } = useRoute()
 
   const shopping = useShoppingLists(userId)
@@ -71,7 +73,7 @@ export default function Workspace({ user }: { user: User }) {
   useEffect(
     () =>
       onOutboxError((label) => {
-        showToast({ kind: 'error', message: `No se pudo ${label}. Se recargaron tus datos.` })
+        showToast({ kind: 'error', message: `No se pudo ${label}. El cambio quedó guardado para revisar.` })
       }),
     [],
   )
@@ -168,13 +170,17 @@ export default function Workspace({ user }: { user: User }) {
   function handleDeleteCatalogEntry(entryId: string) {
     const entry = productCatalog.find((e) => e.id === entryId)
     deleteCatalogEntry(entryId)
-    if (entry?.imageUrl) void deleteCatalogImage(userId, entryId, entry.imageUrl)
+    if (entry?.imageUrl) void whenOutboxIdle().then(() => {
+      if (getOutboxUser() === userId) return deleteCatalogImage(userId, entryId, entry.imageUrl)
+    })
   }
 
   function handleRemoveCatalogImage(entryId: string) {
     const entry = productCatalog.find((e) => e.id === entryId)
     setCatalogEntryImage(entryId, undefined)
-    if (entry?.imageUrl) void deleteCatalogImage(userId, entryId, entry.imageUrl)
+    if (entry?.imageUrl) void whenOutboxIdle().then(() => {
+      if (getOutboxUser() === userId) return deleteCatalogImage(userId, entryId, entry.imageUrl)
+    })
   }
 
   async function handleExport() {
@@ -184,6 +190,7 @@ export default function Workspace({ user }: { user: User }) {
     try {
       if (!navigator.onLine) throw new Error('Conéctate a internet para exportar el respaldo completo, incluidas las fotos.')
       if (getPendingCount() > 0) throw new Error('Espera a que se sincronicen tus cambios antes de exportar.')
+      if (getFailedCount() > 0) throw new Error('Revisa los cambios rechazados antes de exportar un respaldo completo.')
       const version = getOutboxVersion()
       const [allLists, allCategories, allProducts, photos] = await Promise.all([
         fetchLists(), fetchCategories(), fetchCatalog(),
@@ -266,27 +273,38 @@ export default function Workspace({ user }: { user: User }) {
   }
 
   async function handleSignOut() {
-    const pending = getPendingCount()
+    const pending = getPendingCount() + getFailedCount()
     const confirmed = await confirmDialog({
       title: '¿Cerrar sesión?',
       message:
         pending > 0
-          ? `Tienes ${pluralize(pending, 'cambio', 'cambios')} sin sincronizar que se perderán si cierras sesión ahora.`
+          ? `Tienes ${pluralize(pending, 'cambio', 'cambios')} sin sincronizar. Se conservarán en este dispositivo para cuando vuelvas a entrar en esta misma cuenta.`
           : 'Tus listas quedan guardadas en tu cuenta.',
       confirmLabel: 'Cerrar sesión',
-      danger: pending > 0,
+      danger: false,
     })
     if (!confirmed) return
-    clearOutbox(userId)
-    clearCache(userId)
+    if (!activeRef.current || getOutboxUser() !== userId) return
+    if (!saveOutbox()) {
+      showToast({ kind: 'error', message: 'No se pudieron guardar tus cambios en este dispositivo. Mantén la sesión abierta hasta sincronizar.' })
+      return
+    }
+    const keepCache = getPendingCount() + getFailedCount() > 0
     setTab('lists')
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) { showToast({ kind: 'error', message: 'No se pudo cerrar sesión. Intenta de nuevo.' }); return }
+    if (!keepCache) clearCache(userId)
   }
+
+  const recovery = reviewingSync && <Suspense fallback={<ScreenLoading />}>
+    <SyncRecoverySheet onClose={() => setReviewingSync(false)} />
+  </Suspense>
 
   if (route.listId) {
     return (
       <>
-        <SyncBanner />
+        <SyncBanner onReview={() => setReviewingSync(true)} />
+        {recovery}
         <Suspense fallback={<ScreenLoading />}>
         {selectedList ? (
           <ListDetail
@@ -326,7 +344,8 @@ export default function Workspace({ user }: { user: User }) {
 
   return (
     <>
-      <SyncBanner />
+      <SyncBanner onReview={() => setReviewingSync(true)} />
+      {recovery}
       <div className={styles.tabContent}>
         <Suspense fallback={<ScreenLoading />}>
         {route.tab === 'lists' ? (
@@ -371,6 +390,7 @@ export default function Workspace({ user }: { user: User }) {
             backupStatus={backupStatus}
             onImport={(file) => void handleImport(file)}
             onSignOut={() => void handleSignOut()}
+            onReviewSync={() => setReviewingSync(true)}
           />
         )}
         </Suspense>

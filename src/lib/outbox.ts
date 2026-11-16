@@ -3,8 +3,8 @@
 // Cada cambio se aplica primero en pantalla (optimista) y se encola acá. La
 // cola se guarda en localStorage y se envía en orden: si no hay conexión los
 // cambios esperan y se reintentan al volver a estar en línea, en vez de
-// perderse. Si el servidor rechaza un cambio (permisos, datos inválidos) se
-// descarta y se avisa, para que la pantalla se vuelva a sincronizar.
+// perderse. Los rechazos quedan en la misma cola persistente, separados de
+// los envíos automáticos, para revisarlos sin bloquear cambios posteriores.
 import { supabase } from './supabaseClient'
 
 type Row = Record<string, unknown>
@@ -16,10 +16,15 @@ export type OutboxOp =
   | { kind: 'delete'; table: string; match: Match }
 
 interface QueuedOp {
+  id: string
   label: string
   op: OutboxOp
   attempts: number
+  failure?: { status: number; message: string; at: number }
+  retryingFailure?: boolean
 }
+
+export type FailedChange = QueuedOp & { failure: NonNullable<QueuedOp['failure']> }
 
 const STORAGE_PREFIX = 'listiapp-outbox'
 const RETRY_MIN_MS = 3000
@@ -36,6 +41,7 @@ let syncIssue: string | null = null
 
 const listeners = new Set<() => void>()
 const errorListeners = new Set<(label: string, message: string) => void>()
+const recoveryListeners = new Set<() => void>()
 let idleWaiters: (() => void)[] = []
 
 function storageKey(id: string): string {
@@ -43,19 +49,29 @@ function storageKey(id: string): string {
 }
 
 function persist() {
-  if (!userId) return
+  if (!userId) return true
   try {
     if (queue.length === 0) localStorage.removeItem(storageKey(userId))
     else localStorage.setItem(storageKey(userId), JSON.stringify(queue))
     storageIssue = null
+    return true
   } catch {
     storageIssue = 'No se pudieron guardar los cambios en este dispositivo. Mantén la app abierta hasta sincronizar.'
+    return false
   }
 }
 
+export function saveOutbox(): boolean {
+  const saved = persist()
+  notify()
+  return saved
+}
+
+export function getOutboxUser(): string | null { return userId }
+
 function notify() {
   for (const listener of listeners) listener()
-  if (queue.length === 0 && idleWaiters.length > 0) {
+  if (getPendingCount() === 0 && idleWaiters.length > 0) {
     const waiters = idleWaiters
     idleWaiters = []
     for (const resolve of waiters) resolve()
@@ -75,7 +91,7 @@ export function setOutboxUser(nextUserId: string | null) {
     try {
       const raw = localStorage.getItem(storageKey(userId))
       const parsed: unknown = raw ? JSON.parse(raw) : []
-      if (Array.isArray(parsed)) queue = parsed as QueuedOp[]
+      if (Array.isArray(parsed)) queue = (parsed as QueuedOp[]).map((entry) => ({ ...entry, id: entry.id ?? crypto.randomUUID() }))
     } catch {
       queue = []
     }
@@ -96,7 +112,7 @@ export function clearOutbox(id: string) {
 }
 
 export function enqueue(label: string, op: OutboxOp) {
-  queue.push({ label, op, attempts: 0 })
+  queue.push({ id: crypto.randomUUID(), label, op, attempts: 0 })
   version++
   persist()
   notify()
@@ -109,7 +125,38 @@ export function subscribeOutbox(listener: () => void): () => void {
 }
 
 export function getPendingCount(): number {
-  return queue.length
+  return queue.filter((entry) => !entry.failure).length
+}
+
+export function getFailedCount(): number {
+  return queue.filter((entry) => entry.failure).length
+}
+
+export function getFailedChanges(): FailedChange[] {
+  return queue.filter((entry): entry is FailedChange => Boolean(entry.failure))
+}
+
+/** No envía cambios hasta que la persona pide reintentarlos. */
+export function retryFailedChanges(ids: string[]) {
+  const selected = new Set(ids)
+  queue = queue.map((entry) => entry.failure && selected.has(entry.id)
+    ? { ...entry, failure: undefined, attempts: 0, retryingFailure: true } : entry)
+  version++
+  persist()
+  notify()
+  retryPendingChanges()
+}
+
+export function discardFailedChange(id: string) {
+  queue = queue.filter((entry) => entry.id !== id || !entry.failure)
+  version++
+  persist()
+  notify()
+}
+
+export function onOutboxRecovery(listener: () => void): () => void {
+  recoveryListeners.add(listener)
+  return () => recoveryListeners.delete(listener)
 }
 
 export function getSyncIssue(): string | null {
@@ -134,23 +181,26 @@ export function onOutboxError(listener: (label: string, message: string) => void
 
 /** Se resuelve cuando no quedan cambios por enviar. */
 export function whenOutboxIdle(): Promise<void> {
-  if (queue.length === 0) return Promise.resolve()
+  if (getPendingCount() === 0) return Promise.resolve()
   return new Promise((resolve) => idleWaiters.push(resolve))
 }
 
 async function execute(op: OutboxOp): Promise<{ status: number; message: string } | null> {
   try {
-    let result: { error: { message: string } | null; status: number }
+    let result: { error: { message: string } | null; status: number; count?: number | null }
     if (op.kind === 'upsert') {
       result = await supabase.from(op.table).upsert(op.values, { onConflict: op.onConflict ?? 'id' })
     } else if (op.kind === 'update') {
-      let query = supabase.from(op.table).update(op.values)
+      let query = supabase.from(op.table).update(op.values, { count: 'exact' })
       for (const [column, value] of Object.entries(op.match)) query = query.eq(column, value)
       result = await query
     } else {
       let query = supabase.from(op.table).delete()
       for (const [column, value] of Object.entries(op.match)) query = query.eq(column, value)
       result = await query
+    }
+    if (!result.error && op.kind === 'update' && 'id' in op.match && result.count === 0) {
+      return { status: 409, message: 'El dato ya no existe o no tienes acceso para modificarlo.' }
     }
     return result.error ? { status: result.status, message: result.error.message } : null
   } catch (err) {
@@ -173,18 +223,18 @@ function scheduleRetry() {
 }
 
 export async function flush(): Promise<void> {
-  if (flushing || !userId || queue.length === 0) return
+  if (flushing || !userId || getPendingCount() === 0) return
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return
 
   flushing = true
   const flushingFor = userId
   let interrupted = false
   try {
-    while (queue.length > 0 && userId === flushingFor) {
-      const head = queue[0]
+    while (getPendingCount() > 0 && userId === flushingFor) {
+      const head = queue.find((entry) => !entry.failure)!
       const failure = await execute(head.op)
       // La cola cambió de usuario mientras esperábamos la respuesta.
-      if (userId !== flushingFor || queue[0] !== head) {
+      if (userId !== flushingFor || !queue.includes(head)) {
         interrupted = true
         break
       }
@@ -201,12 +251,17 @@ export async function flush(): Promise<void> {
       }
 
       syncIssue = null
-      queue.shift()
-      persist()
       retryDelay = RETRY_MIN_MS
       if (failure) {
+        head.failure = { ...failure, at: Date.now() }
+        version++
+        persist()
         console.error(`No se pudo ${head.label}:`, failure.message)
         for (const listener of errorListeners) listener(head.label, failure.message)
+      } else {
+        queue.splice(queue.indexOf(head), 1)
+        persist()
+        if (head.retryingFailure) for (const listener of recoveryListeners) listener()
       }
       notify()
     }
