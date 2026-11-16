@@ -5,8 +5,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
 
+// Ruta desde la que se sirve la app. En GitHub Pages es el nombre del
+// repositorio (el workflow de deploy define BASE_PATH=/ListiApp/); en
+// desarrollo o con dominio propio es la raíz.
+const base = process.env.BASE_PATH ?? '/'
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
@@ -32,8 +38,8 @@ export default defineConfig({
         lang: 'es',
         categories: ['shopping', 'productivity'],
         display: 'standalone',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         orientation: 'portrait',
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },

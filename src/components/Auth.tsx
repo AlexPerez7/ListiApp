@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import { authRedirectUrl, supabase } from '../lib/supabaseClient'
 import { describeAuthError } from '../lib/authErrors'
 import { Icon } from './Icon'
 import { Logo } from './Logo'
@@ -39,7 +39,7 @@ export function Auth() {
     try {
       if (mode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(address, {
-          redirectTo: window.location.origin,
+          redirectTo: authRedirectUrl,
         })
         if (error) setError(describeAuthError(error))
         else setInfoMessage('Si el correo tiene una cuenta, recibirás un enlace para restablecer tu contraseña.')
@@ -55,7 +55,7 @@ export function Auth() {
       const { data, error } = await supabase.auth.signUp({
         email: address,
         password,
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: authRedirectUrl },
       })
       if (error) setError(describeAuthError(error))
       else if (!data.session) {
@@ -78,7 +78,7 @@ export function Auth() {
     setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: authRedirectUrl },
     })
     if (error) setError(describeAuthError(error))
   }

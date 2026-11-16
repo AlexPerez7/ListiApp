@@ -12,3 +12,8 @@ export const supabase = createClient(
   supabaseUrl || 'https://sin-configurar.supabase.co',
   supabaseAnonKey || 'sin-configurar',
 )
+
+// Dirección a la que Supabase devuelve tras confirmar el correo, iniciar con
+// Google o restablecer la contraseña. Incluye la ruta base porque la app
+// puede no estar en la raíz del dominio (ej: usuario.github.io/ListiApp/).
+export const authRedirectUrl = new URL(import.meta.env.BASE_URL, window.location.origin).href

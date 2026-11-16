@@ -68,4 +68,12 @@ node scripts/generate-icons.mjs
 
 ## Deploy
 
-Configurado para Netlify (`netlify.toml`): build command `npm run build`, publish dir `dist`. Las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` se definen en el panel de Netlify.
+Se publica en GitHub Pages con el workflow `.github/workflows/deploy.yml`, que en cada push a `main` ejecuta lint, pruebas y build, y publica `dist/` en `https://alexperez7.github.io/ListiApp/`.
+
+Configuración necesaria, una sola vez:
+
+1. **Pages**: en el repositorio, Settings → Pages → Source: **GitHub Actions**.
+2. **Secretos**: Settings → Secrets and variables → Actions → New repository secret, para `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+3. **Supabase**: Authentication → URL Configuration. Site URL: `https://alexperez7.github.io/ListiApp/`, y agrega esa misma dirección en Redirect URLs.
+
+La ruta base la define la variable `BASE_PATH` del workflow (`/ListiApp/`). Con un dominio propio se cambia a `/`.
