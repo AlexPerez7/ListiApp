@@ -1,0 +1,48 @@
+name: Supabase keepalive
+
+on:
+  schedule:
+    # Cuatro lecturas al día, fuera del inicio de cada hora (UTC).
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  query:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Consultar la base de datos
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$SUPABASE_URL" || -z "$SUPABASE_ANON_KEY" ]]; then
+            echo '::error::Faltan los secretos VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY.'
+            exit 1
+          fi
+
+          # Solo lectura: consulta como máximo un ID y descarta el contenido.
+          # Los permisos de la clave y las políticas RLS siguen aplicándose.
+          status=$(curl --silent --show-error --fail \
+            --retry 2 --retry-delay 5 \
+            --connect-timeout 10 --max-time 30 \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --output /dev/null --write-out '%{http_code}' \
+            "${SUPABASE_URL%/}/rest/v1/product_catalog?select=id&limit=1")
+
+          if [[ "$status" != '200' ]]; then
+            echo "::error::La consulta devolvió HTTP $status en lugar de 200."
+            exit 1
+          fi
+
+          echo 'Consulta a Supabase completada: HTTP 200.'
+          echo '### Supabase respondió correctamente (HTTP 200)' >> "$GITHUB_STEP_SUMMARY"
