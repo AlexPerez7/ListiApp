@@ -138,7 +138,10 @@ export function AddItemSheet({
                   key={suggestion}
                   type="button"
                   className={`chip ${styles.suggestion}`}
-                  onClick={() => add(suggestion, manualCategoryId ?? rememberedCategory(suggestion))}
+                  onClick={() => {
+                    setName(suggestion)
+                    setNotice(null)
+                  }}
                 >
                   <ItemThumb item={{ name: suggestion }} catalog={productCatalog} size={26} />
                   {suggestion}

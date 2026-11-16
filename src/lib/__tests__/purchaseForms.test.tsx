@@ -2,7 +2,7 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { EditItemSheet } from '../../components/ItemSheet'
+import { AddItemSheet, EditItemSheet } from '../../components/ItemSheet'
 import { BudgetSheet } from '../../components/BudgetSheet'
 import { setCurrency } from '../prefs'
 
@@ -14,6 +14,34 @@ async function mount(element: React.ReactNode) {
   await act(async () => root!.render(element))
 }
 describe('formularios de compra', () => {
+  it.each([false, true])('seleccionar una sugerencia espera a Agregar antes de guardar (comprado: %s)', async (alreadyBought) => {
+    const add = vi.fn(), toggle = vi.fn()
+    const categories = [
+      { id: 'c1', name: 'Habitual', icon: '🍞', position: 0 },
+      { id: 'c2', name: 'Elegida', icon: '🛒', position: 1 },
+    ]
+    await mount(<AddItemSheet currency="CLP"
+      items={alreadyBought ? [{ id: 'i1', name: 'Pan', done: true, position: 0, createdAt: 1 }] : []}
+      categories={categories} itemMemory={{ names: ['Pan'], categoryByName: new Map([['pan', 'c1']]) }}
+      productCatalog={new Map()} onAdd={add} onToggleItem={toggle} onClose={vi.fn()} />)
+    const suggestion = [...document.querySelectorAll('button')].find((button) => button.className.includes('suggestion'))!
+    await act(async () => suggestion.click())
+    expect(document.querySelector<HTMLInputElement>('input[type="text"]')!.value).toBe('Pan')
+    expect(add).not.toHaveBeenCalled()
+    expect(toggle).not.toHaveBeenCalled()
+    expect(document.querySelector('[role="radio"][aria-checked="true"]')!.textContent).toContain('Habitual')
+    const category = [...document.querySelectorAll<HTMLButtonElement>('[role="radio"]')].find((button) => button.textContent?.includes('Elegida'))!
+    await act(async () => category.click())
+    expect(add).not.toHaveBeenCalled()
+    expect(toggle).not.toHaveBeenCalled()
+    await act(async () => document.querySelector<HTMLButtonElement>('button[type="submit"]')!.click())
+    if (alreadyBought) {
+      expect(toggle).toHaveBeenCalledWith('i1')
+      expect(add).not.toHaveBeenCalled()
+    } else {
+      expect(add).toHaveBeenCalledWith(expect.objectContaining({ name: 'Pan', categoryId: 'c2', quantityValue: 1 }))
+    }
+  })
   it.each([3000, undefined])('editar un ítem antiguo conserva su precio total (%s) y cantidad de texto', async (price) => {
     setCurrency('CLP')
     const save = vi.fn()
