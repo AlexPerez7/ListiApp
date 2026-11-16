@@ -2,6 +2,7 @@ import { memo } from 'react'
 import type { Item } from '../types'
 import { getCatalogIcon, type CatalogIcon } from '../lib/productCatalog'
 import { ProductIcon } from './ProductIcon'
+import { ProductPhoto } from './ProductPhoto'
 
 interface ItemThumbProps {
   item: Pick<Item, 'name' | 'imageUrl' | 'iconKey'>
@@ -29,8 +30,9 @@ export const ItemThumb = memo(function ItemThumb({ item, catalog, size = 44 }: I
 
   if (imageUrl) {
     return (
-      <img
+      <ProductPhoto
         src={imageUrl}
+        fallback={<ItemThumb item={{ name: item.name, iconKey: item.iconKey ?? getCatalogIcon(catalog, item.name)?.iconKey }} catalog={new Map()} size={size} />}
         alt=""
         width={size}
         height={size}

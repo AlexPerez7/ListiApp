@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 import styles from './BottomSheet.module.css'
+import { useDialogFocus } from '../hooks/useDialogFocus'
 
 interface BottomSheetProps {
   title: string
@@ -18,22 +19,12 @@ let openSheets = 0
 export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
   const titleId = useId()
   const overlayRef = useRef<HTMLDivElement>(null)
-  const onCloseRef = useRef(onClose)
-  useEffect(() => {
-    onCloseRef.current = onClose
-  })
+  const dialogRef = useDialogFocus(true, onClose)
 
   useEffect(() => {
     openSheets++
     document.body.classList.add('scroll-locked')
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        onCloseRef.current()
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
 
     // En iOS el teclado tapa los elementos fijos al borde inferior: subimos
     // el panel lo que mida el teclado.
@@ -50,7 +41,6 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
     return () => {
       openSheets--
       if (openSheets === 0) document.body.classList.remove('scroll-locked')
-      document.removeEventListener('keydown', onKeyDown)
       viewport?.removeEventListener('resize', adjustForKeyboard)
       viewport?.removeEventListener('scroll', adjustForKeyboard)
     }
@@ -59,6 +49,8 @@ export function BottomSheet({ title, onClose, children }: BottomSheetProps) {
   return createPortal(
     <div ref={overlayRef} className={styles.overlay} onClick={onClose}>
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className={styles.sheet}
         role="dialog"
         aria-modal="true"

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
+import { useDialogFocus } from '../hooks/useDialogFocus'
 import { createPortal } from 'react-dom'
-import { getConfirm, resolveConfirm, subscribeConfirm } from '../lib/confirm'
+import { getConfirm, resolveConfirm, subscribeConfirm, type ActiveConfirm } from '../lib/confirm'
 import { getToast, runToastAction, subscribeToast } from '../lib/toast'
 import { Icon } from './Icon'
 import styles from './Overlays.module.css'
@@ -38,24 +39,18 @@ export function ToastHost({ aboveTabs }: ToastHostProps) {
 
 export function ConfirmHost() {
   const confirm = useSyncExternalStore(subscribeConfirm, getConfirm)
-  const cancelRef = useRef<HTMLButtonElement>(null)
+  return confirm ? <ConfirmDialog confirm={confirm} /> : null
+}
 
-  useEffect(() => {
-    if (!confirm) return
-    cancelRef.current?.focus()
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') resolveConfirm(false)
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [confirm])
-
-  if (!confirm) return null
+function ConfirmDialog({ confirm }: { confirm: ActiveConfirm }) {
+  const dialogRef = useDialogFocus(true, () => resolveConfirm(false))
   const danger = confirm.danger ?? true
 
   return createPortal(
     <div className={styles.confirmOverlay} onClick={() => resolveConfirm(false)}>
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className={styles.confirm}
         role="alertdialog"
         aria-modal="true"
@@ -65,7 +60,7 @@ export function ConfirmHost() {
         <h2 className={styles.confirmTitle}>{confirm.title}</h2>
         {confirm.message && <p className={styles.confirmMessage}>{confirm.message}</p>}
         <div className="btn-row">
-          <button ref={cancelRef} type="button" className="btn" onClick={() => resolveConfirm(false)}>
+          <button type="button" className="btn" onClick={() => resolveConfirm(false)}>
             {confirm.cancelLabel ?? 'Cancelar'}
           </button>
           <button

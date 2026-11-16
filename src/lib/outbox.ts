@@ -22,7 +22,6 @@ interface QueuedOp {
 }
 
 const STORAGE_PREFIX = 'listiapp-outbox'
-const MAX_SERVER_ATTEMPTS = 4
 const RETRY_MIN_MS = 3000
 const RETRY_MAX_MS = 30000
 
@@ -32,6 +31,8 @@ let version = 0
 let flushing = false
 let retryDelay = RETRY_MIN_MS
 let retryTimer: number | undefined
+let storageIssue: string | null = null
+let syncIssue: string | null = null
 
 const listeners = new Set<() => void>()
 const errorListeners = new Set<(label: string, message: string) => void>()
@@ -46,8 +47,9 @@ function persist() {
   try {
     if (queue.length === 0) localStorage.removeItem(storageKey(userId))
     else localStorage.setItem(storageKey(userId), JSON.stringify(queue))
+    storageIssue = null
   } catch {
-    // Sin localStorage la cola vive solo en memoria.
+    storageIssue = 'No se pudieron guardar los cambios en este dispositivo. Mantén la app abierta hasta sincronizar.'
   }
 }
 
@@ -63,6 +65,10 @@ function notify() {
 /** Activa la cola para un usuario (o la desactiva con null al cerrar sesión). */
 export function setOutboxUser(nextUserId: string | null) {
   if (nextUserId === userId) return
+  window.clearTimeout(retryTimer)
+  retryDelay = RETRY_MIN_MS
+  storageIssue = null
+  syncIssue = null
   userId = nextUserId
   queue = []
   if (userId) {
@@ -104,6 +110,16 @@ export function subscribeOutbox(listener: () => void): () => void {
 
 export function getPendingCount(): number {
   return queue.length
+}
+
+export function getSyncIssue(): string | null {
+  return storageIssue ?? syncIssue
+}
+
+export function retryPendingChanges() {
+  window.clearTimeout(retryTimer)
+  retryDelay = RETRY_MIN_MS
+  void flush()
 }
 
 /** Cambia con cada cambio encolado: sirve para detectar lecturas obsoletas. */
@@ -173,17 +189,18 @@ export async function flush(): Promise<void> {
         break
       }
 
-      if (failure && isNetworkFailure(failure.status, failure.message)) {
-        scheduleRetry()
-        return
-      }
-      if (failure && isTemporaryServerFailure(failure.status) && head.attempts + 1 < MAX_SERVER_ATTEMPTS) {
+      if (failure && (isNetworkFailure(failure.status, failure.message) || isTemporaryServerFailure(failure.status))) {
         head.attempts++
+        syncIssue = failure.status === 401
+          ? 'No se pudo validar tu sesión. Tus cambios siguen pendientes; reintentaremos la conexión.'
+          : 'No se pudo sincronizar. Conservamos tus cambios y volveremos a intentarlo.'
         persist()
+        notify()
         scheduleRetry()
         return
       }
 
+      syncIssue = null
       queue.shift()
       persist()
       retryDelay = RETRY_MIN_MS

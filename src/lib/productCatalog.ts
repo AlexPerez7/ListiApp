@@ -15,15 +15,13 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'naranja', iconKey: 'citrus' },
   { name: 'mandarina', iconKey: 'citrus' },
   { name: 'limon', iconKey: 'lemon' },
-  { name: 'banana', iconKey: 'banana' },
-  { name: 'banano', iconKey: 'banana' },
+  { name: 'plátano', iconKey: 'banana' },
   { name: 'pera', iconKey: 'pear' },
   { name: 'uva', iconKey: 'grapes' },
   { name: 'sandia', iconKey: 'watermelon' },
   { name: 'frutilla', iconKey: 'strawberry' },
   { name: 'piña', iconKey: 'pineapple' },
   { name: 'palta', iconKey: 'avocado' },
-  { name: 'aguacate', iconKey: 'avocado' },
 
   // Verduras
   { name: 'tomate', iconKey: 'tomato' },
@@ -31,7 +29,8 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'cebolla', iconKey: 'onion' },
   { name: 'zanahoria', iconKey: 'carrot' },
   { name: 'lechuga', iconKey: 'leafy' },
-  { name: 'brocoli', iconKey: 'leafy' },
+  { name: 'brócoli', iconKey: 'broccoli' },
+  { name: 'coliflor', iconKey: 'cauliflower' },
   { name: 'pepino', iconKey: 'cucumber' },
   { name: 'maiz', iconKey: 'corn' },
   { name: 'choclo', iconKey: 'corn' },
@@ -57,10 +56,10 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
 
   // Lácteos y huevos
   { name: 'leche', iconKey: 'milk' },
-  { name: 'yogurt', iconKey: 'milk' },
+  { name: 'yogurt', iconKey: 'yogurt' },
   { name: 'queso', iconKey: 'cheese' },
   { name: 'mantequilla', iconKey: 'butter' },
-  { name: 'crema', iconKey: 'butter' },
+  { name: 'crema', iconKey: 'cream' },
   { name: 'huevo', iconKey: 'egg' },
 
   // Panadería
@@ -77,15 +76,15 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'harina', iconKey: 'flour' },
   { name: 'azúcar', iconKey: 'sugar' },
   { name: 'sal', iconKey: 'salt' },
-  { name: 'mayonesa', iconKey: 'condiment' },
-  { name: 'ketchup', iconKey: 'condiment' },
+  { name: 'mayonesa', iconKey: 'mayonnaise' },
+  { name: 'ketchup', iconKey: 'ketchup' },
+  { name: 'mostaza', iconKey: 'mustard' },
   { name: 'aceite', iconKey: 'oil' },
 
   // Bebidas
   { name: 'café', iconKey: 'coffee' },
   { name: 'té', iconKey: 'tea' },
-  { name: 'mate', iconKey: 'mate' },
-  { name: 'yerba', iconKey: 'mate' },
+  { name: 'yerba mate', iconKey: 'mate' },
   { name: 'agua', iconKey: 'water' },
   { name: 'bebida', iconKey: 'soda' },
   { name: 'jugo', iconKey: 'juice' },
@@ -107,6 +106,7 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'detergente', iconKey: 'cleaning' },
   { name: 'cloro', iconKey: 'bleach' },
   { name: 'jabón', iconKey: 'soap' },
+  { name: 'jabón líquido', iconKey: 'liquidSoap' },
   { name: 'shampoo', iconKey: 'shampoo' },
   { name: 'champú', iconKey: 'shampoo' },
   { name: 'desodorante', iconKey: 'deodorant' },
@@ -123,6 +123,24 @@ export function normalizeProductName(name: string): string {
     .toLowerCase()
 }
 
+// Sinónimos conocidos; las coincidencias exactas del catálogo personal tienen prioridad.
+const PRODUCT_ALIASES: Record<string, string> = {
+  banana: 'platano', banano: 'platano', aguacate: 'palta',
+  mate: 'yerba mate', yerba: 'yerba mate', yogur: 'yogurt',
+  'mantequilla de mani': 'pasta de mani', 'crema de mani': 'pasta de mani',
+  'avena integral': 'avena',
+}
+
+export function canonicalProductName(name: string): string {
+  const normalized = normalizeProductName(name)
+  return PRODUCT_ALIASES[normalized] ?? normalized
+}
+
+export function missingDefaultProducts(entries: Pick<ProductCatalogEntry, 'name'>[]) {
+  const existing = new Set(entries.map((entry) => canonicalProductName(entry.name)))
+  return DEFAULT_PRODUCT_CATALOG.filter((entry) => !existing.has(canonicalProductName(entry.name)))
+}
+
 export interface CatalogIcon {
   iconKey: string
   imageUrl?: string
@@ -137,5 +155,8 @@ export function buildCatalogMap(entries: ProductCatalogEntry[]): Map<string, Cat
 }
 
 export function getCatalogIcon(catalog: Map<string, CatalogIcon>, name: string): CatalogIcon | undefined {
-  return catalog.get(normalizeProductName(name))
+  const exact = catalog.get(normalizeProductName(name))
+  if (exact) return exact
+  const canonical = canonicalProductName(name)
+  return catalog.get(canonical) ?? [...catalog].find(([key]) => canonicalProductName(key) === canonical)?.[1]
 }

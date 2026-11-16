@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { ProductCatalogEntry } from '../types'
 import { ALL_ICON_KEYS } from '../lib/productIcons'
-import { normalizeProductName } from '../lib/productCatalog'
+import { missingDefaultProducts, normalizeProductName } from '../lib/productCatalog'
 import { describeUploadError } from '../lib/imageUpload'
 import { confirmDialog } from '../lib/confirm'
 import { BottomSheet } from './BottomSheet'
 import { ProductIcon } from './ProductIcon'
+import { ProductPhoto } from './ProductPhoto'
 import { Icon } from './Icon'
 import { ProductIconGrid } from './Pickers'
 import { SkeletonList } from './Skeleton'
@@ -19,12 +20,14 @@ interface ProductsProps {
   onDelete: (entryId: string) => void
   onUploadImage: (entryId: string, file: File) => Promise<void>
   onRemoveImage: (entryId: string) => void
+  onAddDefaults: () => void
 }
 
-export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onUploadImage, onRemoveImage }: ProductsProps) {
+export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onUploadImage, onRemoveImage, onAddDefaults }: ProductsProps) {
   const [query, setQuery] = useState('')
   // null = cerrado, 'new' = creando, otro valor = id del producto en edición
   const [sheet, setSheet] = useState<string | null>(null)
+  const missingDefaults = missingDefaultProducts(catalog).length
 
   const filteredCatalog = useMemo(() => {
     const needle = normalizeProductName(query)
@@ -53,6 +56,12 @@ export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onUpl
         <h1 className="page-title">Productos</h1>
         <p className="page-subtitle">La imagen que se muestra sola cuando agregas un ítem con ese nombre.</p>
       </header>
+
+      {!loading && missingDefaults > 0 && (
+        <button type="button" className="btn" onClick={onAddDefaults}>
+          Agregar {missingDefaults} productos del catálogo base
+        </button>
+      )}
 
       {catalog.length > 8 && (
         <label className="search">
@@ -92,7 +101,7 @@ export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onUpl
               <button type="button" className={styles.tile} onClick={() => setSheet(entry.id)}>
                 <span className={styles.tileImage}>
                   {entry.imageUrl ? (
-                    <img src={entry.imageUrl} alt="" loading="lazy" decoding="async" className={styles.tilePhoto} />
+                    <ProductPhoto src={entry.imageUrl} fallback={<ProductIcon iconKey={entry.iconKey} size={52} />} alt="" loading="lazy" decoding="async" className={styles.tilePhoto} />
                   ) : (
                     <ProductIcon iconKey={entry.iconKey} size={52} />
                   )}
@@ -184,7 +193,7 @@ function ProductSheet({ entry, nameTaken, onSave, onDelete, onUploadImage, onRem
         <div className={styles.nameRow}>
           <span className={`${styles.preview} ${uploading ? styles.previewUploading : ''}`}>
             {entry?.imageUrl ? (
-              <img src={entry.imageUrl} alt="" className={styles.tilePhoto} />
+              <ProductPhoto src={entry.imageUrl} fallback={<ProductIcon iconKey={iconKey} size={40} />} alt="" className={styles.tilePhoto} />
             ) : (
               <ProductIcon iconKey={iconKey} size={40} />
             )}

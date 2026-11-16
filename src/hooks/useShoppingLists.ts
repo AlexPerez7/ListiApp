@@ -5,8 +5,9 @@ import { enqueue, whenOutboxIdle } from '../lib/outbox'
 import type { BackupPayload } from '../lib/backup'
 import type { Category, Item, ShoppingList } from '../types'
 import { useSyncedCollection, type RealtimePayload } from './useSyncedCollection'
+import { readAllPages } from '../lib/pagination'
+import { normalizeProductName } from '../lib/productCatalog'
 
-const LISTS_LIMIT = 200
 
 interface DbItem {
   id: string
@@ -86,20 +87,27 @@ function listToRow(list: ShoppingList) {
   }
 }
 
-async function fetchLists(): Promise<ShoppingList[] | null> {
-  const { data, error } = await supabase
-    .from('lists')
-    .select(
-      'id, name, created_at, is_template, items(id, list_id, name, quantity, category_id, price, image_url, icon_key, position, done, created_at)',
-    )
-    .order('created_at', { ascending: false })
-    .limit(LISTS_LIMIT)
-
-  if (error) {
-    console.error('Error al cargar listas:', error.message)
+export async function fetchLists(): Promise<ShoppingList[] | null> {
+  try {
+    const [rows, items] = await Promise.all([
+      readAllPages<DbListRow>((from, to) => supabase.from('lists')
+        .select('id, name, created_at, is_template').order('id').range(from, to)),
+      readAllPages<DbItem>((from, to) => supabase.from('items')
+        .select('id, list_id, name, quantity, category_id, price, image_url, icon_key, position, done, created_at')
+        .order('id').range(from, to)),
+    ])
+    const byList = new Map<string, DbItem[]>()
+    for (const item of items) {
+      const group = byList.get(item.list_id) ?? []
+      group.push(item)
+      byList.set(item.list_id, group)
+    }
+    return rows.map((row) => mapList({ ...row, items: byList.get(row.id) ?? [] }))
+      .sort((a, b) => b.createdAt - a.createdAt)
+  } catch (error) {
+    console.error('Error al cargar listas:', error)
     return null
   }
-  return ((data ?? []) as DbList[]).map(mapList)
 }
 
 function applyListChange(prev: ShoppingList[], payload: RealtimePayload): ShoppingList[] {
@@ -232,7 +240,7 @@ export function useShoppingLists(userId: string) {
   // pisa nada existente); las categorías se asocian por nombre a las que ya
   // tenga el usuario, y si ninguna coincide el ítem queda sin categoría.
   function importBackup(payload: BackupPayload, categories: Category[]): number {
-    const categoryIdByName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c.id]))
+    const categoryIdByName = new Map(categories.map((c) => [normalizeProductName(c.name), c.id]))
     const now = Date.now()
 
     payload.lists.forEach((listData, listIndex) => {
@@ -249,7 +257,7 @@ export function useShoppingLists(userId: string) {
             quantity: itemData.quantity,
             price: itemData.price,
             categoryId: itemData.categoryName
-              ? categoryIdByName.get(itemData.categoryName.trim().toLowerCase())
+              ? categoryIdByName.get(normalizeProductName(itemData.categoryName))
               : undefined,
             imageUrl: itemData.imageUrl,
             iconKey: itemData.iconKey,

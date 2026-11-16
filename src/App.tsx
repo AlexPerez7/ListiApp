@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient'
-import { useShoppingLists } from './hooks/useShoppingLists'
-import { useCategories } from './hooks/useCategories'
-import { useProductCatalog } from './hooks/useProductCatalog'
+import { fetchLists, useShoppingLists } from './hooks/useShoppingLists'
+import { fetchCategories, useCategories } from './hooks/useCategories'
+import { fetchCatalog, useProductCatalog } from './hooks/useProductCatalog'
 import { useRoute } from './hooks/useRoute'
 import { uploadItemImage, deleteItemImage, uploadCatalogImage, deleteCatalogImage } from './lib/imageUpload'
 import { rememberProductPhoto } from './lib/productPhotos'
 import { buildItemMemory } from './lib/itemSuggestions'
-import { buildCatalogMap } from './lib/productCatalog'
-import { buildBackup, downloadBackup, parseBackup } from './lib/backup'
+import { buildCatalogMap, normalizeProductName } from './lib/productCatalog'
+import { buildBackup, downloadBackup, MAX_BACKUP_BYTES, parseBackup } from './lib/backup'
+import { embedBackupImages, restoreBackupImages } from './lib/backupImages'
+import { readAllPages } from './lib/pagination'
+import { CURRENCIES, setCurrency, setTheme, usePrefs } from './lib/prefs'
 import { clearCache } from './lib/cache'
-import { clearOutbox, getPendingCount, onOutboxError, setOutboxUser } from './lib/outbox'
+import { clearOutbox, enqueue, getOutboxVersion, getPendingCount, onOutboxError, setOutboxUser } from './lib/outbox'
 import { showToast } from './lib/toast'
 import { confirmDialog } from './lib/confirm'
 import { pluralize } from './lib/format'
@@ -90,7 +93,7 @@ function SetupNotice() {
       <Logo size={56} />
       <h1>Falta configurar Supabase</h1>
       <p>
-        Copia <strong>.env.example</strong> a <strong>.env</strong> y completa las credenciales de tu proyecto
+        Copia <strong>.env.example</strong> a <strong>.env</strong> y completa la URL y la clave pública de tu proyecto
         (Project Settings → API). Luego reinicia el servidor de desarrollo.
       </p>
       <code>{'VITE_SUPABASE_URL=\nVITE_SUPABASE_ANON_KEY='}</code>
@@ -100,6 +103,14 @@ function SetupNotice() {
 
 function Workspace({ user }: { user: User }) {
   const userId = user.id
+  const preferences = usePrefs()
+  const activeRef = useRef(true)
+  useEffect(() => {
+    activeRef.current = true
+    return () => { activeRef.current = false }
+  }, [])
+  const [backupBusy, setBackupBusy] = useState(false)
+  const [backupStatus, setBackupStatus] = useState('')
   const { route, openList, closeList, setTab } = useRoute()
 
   const shopping = useShoppingLists(userId)
@@ -119,6 +130,7 @@ function Workspace({ user }: { user: User }) {
     updateEntry: updateCatalogEntry,
     deleteEntry: deleteCatalogEntry,
     setEntryImage: setCatalogEntryImage,
+    addDefaultProducts,
   } = useProductCatalog(userId)
 
   const itemMemory = useMemo(() => buildItemMemory(lists), [lists])
@@ -233,22 +245,91 @@ function Workspace({ user }: { user: User }) {
     if (entry?.imageUrl) void deleteCatalogImage(userId, entryId, entry.imageUrl)
   }
 
-  function handleExport() {
-    downloadBackup(buildBackup(lists, categories))
-    showToast({ kind: 'success', message: 'Respaldo descargado' })
+  async function handleExport() {
+    if (backupBusy) return
+    setBackupBusy(true)
+    setBackupStatus('Preparando respaldo completo…')
+    try {
+      if (!navigator.onLine) throw new Error('Conéctate a internet para exportar el respaldo completo, incluidas las fotos.')
+      if (getPendingCount() > 0) throw new Error('Espera a que se sincronicen tus cambios antes de exportar.')
+      const version = getOutboxVersion()
+      const [allLists, allCategories, allProducts, photos] = await Promise.all([
+        fetchLists(), fetchCategories(), fetchCatalog(),
+        readAllPages<{ name_key: string; image_url: string }>((from, to) => supabase.from('product_photos')
+          .select('name_key, image_url').order('id').range(from, to)),
+      ])
+      if (!allLists || !allCategories || !allProducts) throw new Error('No se pudieron cargar todos tus datos. Intenta de nuevo.')
+      const payload = await embedBackupImages(buildBackup(allLists, allCategories, {
+        catalog: allProducts, preferences,
+        productPhotos: photos.map((photo) => ({ nameKey: photo.name_key, imageUrl: photo.image_url })),
+      }))
+      if (version !== getOutboxVersion()) throw new Error('Tus datos cambiaron durante la exportación. Vuelve a exportar.')
+      if (!activeRef.current) return
+      downloadBackup(payload)
+      showToast({ kind: 'success', message: 'Respaldo completo descargado' })
+    } catch (err) {
+      showToast({ kind: 'error', message: err instanceof Error ? err.message : 'No se pudo exportar el respaldo.' })
+    } finally {
+      setBackupBusy(false)
+      setBackupStatus('')
+    }
   }
 
   async function handleImport(file: File) {
+    if (backupBusy) return
+    setBackupBusy(true)
+    setBackupStatus('Preparando importación…')
     try {
-      const payload = parseBackup(await file.text())
-      const count = shopping.importBackup(payload, categories)
-      showToast({ kind: 'success', message: `Se ${count === 1 ? 'importó' : 'importaron'} ${pluralize(count, 'lista', 'listas')}` })
+      if (file.size > MAX_BACKUP_BYTES) throw new Error('El respaldo supera el límite de 25 MB.')
+      let payload = parseBackup(await file.text())
+      const confirmed = await confirmDialog({
+        title: '¿Importar respaldo?',
+        message: 'Se agregarán las listas y los productos y categorías que falten. Los existentes con el mismo nombre se conservarán. Se aplicarán el tema y la moneda del respaldo, si los incluye.',
+        confirmLabel: 'Importar',
+        danger: false,
+      })
+      if (!confirmed) return
+      if (Object.keys(payload.images ?? {}).length > 0) {
+        if (!navigator.onLine) throw new Error('Necesitas conexión para restaurar las fotos del respaldo.')
+        setBackupStatus('Restaurando fotos…')
+        payload = await restoreBackupImages(payload, userId)
+      }
+      if (!activeRef.current) return
+      const restoredCategories = [...categories]
+      const categoryNames = new Set(categories.map((entry) => normalizeProductName(entry.name)))
+      let nextPosition = Math.max(-1, ...categories.map((entry) => entry.position)) + 1
+      for (const entry of payload.categories ?? []) {
+        const key = normalizeProductName(entry.name)
+        if (categoryNames.has(key)) continue
+        restoredCategories.push(createCategory(entry.name, entry.icon, nextPosition++))
+        categoryNames.add(key)
+      }
+      const productNames = new Set(productCatalog.map((entry) => normalizeProductName(entry.name)))
+      for (const entry of payload.catalog ?? []) {
+        const key = normalizeProductName(entry.name)
+        if (productNames.has(key)) continue
+        createCatalogEntry(entry.name, entry.iconKey, entry.imageUrl)
+        productNames.add(key)
+      }
+      for (const photo of payload.productPhotos ?? []) {
+        enqueue('restaurar la foto recordada', { kind: 'upsert', table: 'product_photos',
+          values: { name_key: photo.nameKey, image_url: photo.imageUrl }, onConflict: 'user_id,name_key' })
+      }
+      const count = shopping.importBackup(payload, restoredCategories)
+      if (payload.preferences) {
+        setTheme(payload.preferences.theme)
+        if (CURRENCIES.some((entry) => entry.code === payload.preferences!.currency)) setCurrency(payload.preferences.currency)
+      }
+      showToast({ kind: 'success', message: `Respaldo agregado: ${pluralize(count, 'lista', 'listas')}. Los cambios pendientes se sincronizarán.` })
       setTab('lists')
     } catch (err) {
       showToast({
         kind: 'error',
         message: err instanceof Error ? err.message : 'No se pudo importar el archivo.',
       })
+    } finally {
+      setBackupBusy(false)
+      setBackupStatus('')
     }
   }
 
@@ -344,12 +425,14 @@ function Workspace({ user }: { user: User }) {
             onDelete={handleDeleteCatalogEntry}
             onUploadImage={handleUploadCatalogImage}
             onRemoveImage={handleRemoveCatalogImage}
+            onAddDefaults={addDefaultProducts}
           />
         ) : (
           <Settings
             email={user.email}
-            listCount={lists.length}
-            onExport={handleExport}
+            onExport={() => void handleExport()}
+            backupBusy={backupBusy}
+            backupStatus={backupStatus}
             onImport={(file) => void handleImport(file)}
             onSignOut={() => void handleSignOut()}
           />

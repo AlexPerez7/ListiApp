@@ -9,7 +9,8 @@ import styles from './Settings.module.css'
 
 interface SettingsProps {
   email?: string
-  listCount: number
+  backupBusy: boolean
+  backupStatus: string
   onExport: () => void
   onImport: (file: File) => void
   onSignOut: () => void
@@ -21,7 +22,7 @@ const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'dark', label: 'Oscuro' },
 ]
 
-export function Settings({ email, listCount, onExport, onImport, onSignOut }: SettingsProps) {
+export function Settings({ email, backupBusy, backupStatus, onExport, onImport, onSignOut }: SettingsProps) {
   const { theme, currency } = usePrefs()
   const online = useOnlineStatus()
   const pending = usePendingSync()
@@ -104,24 +105,25 @@ export function Settings({ email, listCount, onExport, onImport, onSignOut }: Se
       <section className={styles.group}>
         <h2 className="section-label">Tus datos</h2>
         <div className={styles.card}>
-          <button type="button" className={styles.row} onClick={onExport} disabled={listCount === 0}>
+          <button type="button" className={styles.row} onClick={onExport} disabled={backupBusy || !online || pending > 0}>
             <Icon name="download" size={20} />
             <span className={styles.rowLabel}>
               Exportar respaldo
-              <small>{listCount === 0 ? 'Aún no tienes listas' : `${pluralize(listCount, 'lista', 'listas')} en un archivo JSON`}</small>
+              <small>{!online ? 'Necesitas conexión para incluir todas las fotos' : pending > 0 ? 'Espera a que se sincronicen los cambios' : 'Listas, categorías, productos, preferencias y fotos'}</small>
             </span>
             <Icon name="chevronRight" size={18} className={styles.chevron} />
           </button>
-          <button type="button" className={styles.row} onClick={() => importInputRef.current?.click()}>
+          <button type="button" className={styles.row} disabled={backupBusy} onClick={() => importInputRef.current?.click()}>
             <Icon name="upload" size={20} />
             <span className={styles.rowLabel}>
               Importar respaldo
-              <small>Agrega las listas del archivo sin borrar las actuales</small>
+              <small>Agrega datos sin borrar los actuales; restaura tema y moneda</small>
             </span>
             <Icon name="chevronRight" size={18} className={styles.chevron} />
           </button>
           <input ref={importInputRef} type="file" accept="application/json,.json" onChange={handleImportChange} hidden />
         </div>
+        {backupBusy && <p role="status">{backupStatus}</p>}
       </section>
 
       <section className={styles.group}>
@@ -159,7 +161,7 @@ export function Settings({ email, listCount, onExport, onImport, onSignOut }: Se
 
       <section className={styles.group}>
         <div className={styles.card}>
-          <button type="button" className={`${styles.row} ${styles.rowDanger}`} onClick={onSignOut}>
+          <button type="button" className={`${styles.row} ${styles.rowDanger}`} disabled={backupBusy} onClick={onSignOut}>
             <Icon name="logout" size={20} />
             <span className={styles.rowLabel}>Cerrar sesión</span>
           </button>

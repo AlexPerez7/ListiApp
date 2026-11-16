@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+import { getSyncIssue, retryPendingChanges, subscribeOutbox } from '../lib/outbox'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { usePendingSync } from '../hooks/usePendingSync'
 import { pluralize } from '../lib/format'
@@ -13,6 +14,7 @@ const SLOW_SYNC_MS = 2500
 export function SyncBanner() {
   const online = useOnlineStatus()
   const pending = usePendingSync()
+  const syncIssue = useSyncExternalStore(subscribeOutbox, getSyncIssue)
   const [slow, setSlow] = useState(false)
   const updateAvailable = useUpdateStatus() === 'available'
   const [updateDismissed, setUpdateDismissed] = useState(false)
@@ -44,6 +46,16 @@ export function SyncBanner() {
       </button>
     </div>
   )
+
+  if (syncIssue && hasPending) {
+    return (
+      <div className={styles.syncBanner} role="alert">
+        <Icon name="alert" size={15} />
+        <span>{syncIssue}</span>
+        {online && <button type="button" className={styles.updateButton} onClick={retryPendingChanges}>Reintentar</button>}
+      </div>
+    )
+  }
 
   if (!online) {
     return (

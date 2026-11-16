@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type Result = { error: { message: string } | null; status: number }
 const results: Result[] = []
@@ -35,7 +35,39 @@ beforeEach(() => {
   calls.length = 0
 })
 
+afterEach(() => {
+  outbox.setOutboxUser(null)
+  vi.restoreAllMocks()
+})
+
 describe('cola de cambios', () => {
+  it('avisa si el navegador no puede persistir cambios y conserva la cola en memoria', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    outbox.setOutboxUser('u1')
+    const storage = vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError') })
+    outbox.enqueue('crear', { kind: 'upsert', table: 'lists', values: { id: '1' } })
+    expect(outbox.getPendingCount()).toBe(1)
+    expect(outbox.getSyncIssue()).toContain('Mantén la app abierta')
+    storage.mockRestore()
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    await outbox.flush()
+    expect(outbox.getPendingCount()).toBe(0)
+    expect(outbox.getSyncIssue()).toBeNull()
+  })
+  it.each([401, 408, 429, 500, 503])('conserva cambios tras más de cuatro errores HTTP %s y luego recupera', async (status) => {
+    results.push(...Array.from({ length: 6 }, () => ({ error: { message: 'temporal' }, status })))
+    outbox.setOutboxUser('u1')
+    outbox.enqueue('crear', { kind: 'upsert', table: 'lists', values: { id: '1' } })
+    await vi.waitFor(() => expect(outbox.getSyncIssue()).not.toBeNull())
+    for (let i = 0; i < 5; i++) await outbox.flush()
+    expect(outbox.getPendingCount()).toBe(1)
+    expect(JSON.parse(localStorage.getItem('listiapp-outbox:u1')!)).toHaveLength(1)
+    expect(outbox.getSyncIssue()).not.toBeNull()
+    await outbox.flush()
+    expect(outbox.getPendingCount()).toBe(0)
+    expect(outbox.getSyncIssue()).toBeNull()
+    expect(calls).toHaveLength(7)
+  })
   it('envía los cambios en orden y queda vacía', async () => {
     outbox.setOutboxUser('u1')
     outbox.enqueue('crear', { kind: 'upsert', table: 'lists', values: { id: '1' } })

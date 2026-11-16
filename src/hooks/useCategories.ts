@@ -3,6 +3,7 @@ import { DEFAULT_CATEGORIES } from '../lib/categories'
 import { enqueue } from '../lib/outbox'
 import type { Category } from '../types'
 import { useSyncedCollection, type RealtimePayload } from './useSyncedCollection'
+import { readAllPages } from '../lib/pagination'
 
 const COLUMNS = 'id, name, icon, position'
 
@@ -10,13 +11,14 @@ function byPosition(a: Category, b: Category): number {
   return a.position - b.position
 }
 
-async function fetchCategories(): Promise<Category[] | null> {
-  const { data, error } = await supabase.from('categories').select(COLUMNS).order('position', { ascending: true })
-  if (error) {
-    console.error('Error al cargar categorías:', error.message)
+export async function fetchCategories(): Promise<Category[] | null> {
+  try {
+    return (await readAllPages<Category>((from, to) => supabase.from('categories')
+      .select(COLUMNS).order('id').range(from, to))).sort(byPosition)
+  } catch (error) {
+    console.error('Error al cargar categorías:', error)
     return null
   }
-  return (data ?? []) as Category[]
 }
 
 // Cuenta nueva: crea las categorías por defecto y las devuelve.
@@ -55,11 +57,12 @@ export function useCategories(userId: string) {
     afterFirstFetch: seedIfEmpty,
   })
 
-  function createCategory(name: string, icon: string) {
+  function createCategory(name: string, icon: string, restoredPosition?: number): Category {
     const id = crypto.randomUUID()
-    const position = categories.length > 0 ? Math.max(...categories.map((c) => c.position)) + 1 : 0
+    const position = restoredPosition ?? (categories.length > 0 ? Math.max(...categories.map((c) => c.position)) + 1 : 0)
     setCategories((prev) => [...prev, { id, name, icon, position }])
     enqueue('crear la categoría', { kind: 'upsert', table: 'categories', values: { id, name, icon, position } })
+    return { id, name, icon, position }
   }
 
   function updateCategory(categoryId: string, name: string, icon: string) {

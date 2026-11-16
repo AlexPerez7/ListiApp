@@ -17,6 +17,33 @@ const lists: ShoppingList[] = [
 ]
 
 describe('respaldo', () => {
+  it('conserva categorías, catálogo, preferencias y fotos embebidas en la versión 2', () => {
+    const photo = 'https://example.com/foto.jpg'
+    const payload = buildBackup(lists, categories, {
+      catalog: [{ id: 'p1', name: 'Avena', iconKey: 'oats', imageUrl: photo }],
+      preferences: { theme: 'dark', currency: 'CLP' },
+      productPhotos: [{ nameKey: 'avena', imageUrl: photo }],
+    })
+    payload.images = { [photo]: 'data:image/jpeg;base64,YQ==' }
+    const restored = parseBackup(JSON.stringify(payload))
+    expect(restored.version).toBe(2)
+    expect(restored.categories).toEqual([{ name: 'Bebidas', icon: '🥤', position: 0 }])
+    expect(restored.catalog?.[0]).toMatchObject({ name: 'Avena', iconKey: 'oats', imageUrl: photo })
+    expect(restored.preferences).toEqual({ theme: 'dark', currency: 'CLP' })
+    expect(restored.productPhotos).toEqual([{ nameKey: 'avena', imageUrl: photo }])
+    expect(restored.images?.[photo]).toBe('data:image/jpeg;base64,YQ==')
+  })
+
+  it('acepta respaldos anteriores y cuentas sin listas que tengan otros datos', () => {
+    expect(parseBackup(JSON.stringify({ version: 1, lists: [{ name: 'Antes', items: [] }] })).version).toBe(1)
+    expect(parseBackup(JSON.stringify(buildBackup([], categories))).categories).toHaveLength(1)
+  })
+
+  it('rechaza versiones futuras y copias de imágenes inválidas', () => {
+    expect(() => parseBackup('{"version":99,"lists":[]}')).toThrow('versión')
+    expect(() => parseBackup(JSON.stringify({ version: 2, lists: [], categories,
+      images: { 'https://example.com/img': 'data:text/html;base64,YQ==' } }))).toThrow('imagen inválida')
+  })
   it('exporta e importa sin perder datos', () => {
     const restored = parseBackup(JSON.stringify(buildBackup(lists, categories)))
     expect(restored.lists).toHaveLength(1)

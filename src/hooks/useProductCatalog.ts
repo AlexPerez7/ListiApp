@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabaseClient'
-import { DEFAULT_PRODUCT_CATALOG } from '../lib/productCatalog'
+import { DEFAULT_PRODUCT_CATALOG, missingDefaultProducts } from '../lib/productCatalog'
 import { enqueue } from '../lib/outbox'
 import type { ProductCatalogEntry } from '../types'
 import { useSyncedCollection, type RealtimePayload } from './useSyncedCollection'
+import { readAllPages } from '../lib/pagination'
 
 interface DbProductCatalogEntry {
   id: string
@@ -21,13 +22,15 @@ function sortEntries(entries: ProductCatalogEntry[]): ProductCatalogEntry[] {
   return [...entries].sort((a, b) => a.name.localeCompare(b.name, 'es'))
 }
 
-async function fetchCatalog(): Promise<ProductCatalogEntry[] | null> {
-  const { data, error } = await supabase.from('product_catalog').select(COLUMNS)
-  if (error) {
-    console.error('Error al cargar el catálogo de productos:', error.message)
+export async function fetchCatalog(): Promise<ProductCatalogEntry[] | null> {
+  try {
+    const rows = await readAllPages<DbProductCatalogEntry>((from, to) => supabase.from('product_catalog')
+      .select(COLUMNS).order('id').range(from, to))
+    return sortEntries(rows.map(mapEntry))
+  } catch (error) {
+    console.error('Error al cargar el catálogo de productos:', error)
     return null
   }
-  return sortEntries(((data ?? []) as DbProductCatalogEntry[]).map(mapEntry))
 }
 
 // Cuenta nueva: crea el catálogo por defecto y lo devuelve.
@@ -64,10 +67,10 @@ export function useProductCatalog(userId: string) {
     afterFirstFetch: seedIfEmpty,
   })
 
-  function createEntry(name: string, iconKey: string) {
+  function createEntry(name: string, iconKey: string, imageUrl?: string) {
     const id = crypto.randomUUID()
-    setCatalog((prev) => sortEntries([...prev, { id, name, iconKey }]))
-    enqueue('crear el producto', { kind: 'upsert', table: 'product_catalog', values: { id, name, icon_key: iconKey } })
+    setCatalog((prev) => sortEntries([...prev, { id, name, iconKey, imageUrl }]))
+    enqueue('crear el producto', { kind: 'upsert', table: 'product_catalog', values: { id, name, icon_key: iconKey, image_url: imageUrl ?? null } })
   }
 
   function updateEntry(entryId: string, name: string, iconKey: string) {
@@ -78,6 +81,14 @@ export function useProductCatalog(userId: string) {
       values: { name, icon_key: iconKey },
       match: { id: entryId },
     })
+  }
+
+  function addDefaultProducts() {
+    const entries = missingDefaultProducts(catalog).map((entry) => ({ ...entry, id: crypto.randomUUID() }))
+    if (entries.length === 0) return
+    setCatalog((prev) => sortEntries([...prev, ...entries]))
+    enqueue('agregar productos del catálogo base', { kind: 'upsert', table: 'product_catalog',
+      values: entries.map((entry) => ({ id: entry.id, name: entry.name, icon_key: entry.iconKey })) })
   }
 
   function setEntryImage(entryId: string, imageUrl: string | undefined) {
@@ -95,5 +106,5 @@ export function useProductCatalog(userId: string) {
     enqueue('eliminar el producto', { kind: 'delete', table: 'product_catalog', match: { id: entryId } })
   }
 
-  return { catalog, loading, createEntry, updateEntry, deleteEntry, setEntryImage }
+  return { catalog, loading, createEntry, updateEntry, deleteEntry, setEntryImage, addDefaultProducts }
 }
