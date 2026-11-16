@@ -14,6 +14,7 @@ PWA para armar listas de compras. Se instala en la pantalla de inicio del teléf
 - **Sin conexión**: los datos se guardan en el dispositivo y los cambios hechos sin conexión se envían solos al reconectar.
 - **Cuenta**: correo y contraseña o Google (Supabase Auth), con recuperación de contraseña.
 - **Ajustes**: tema claro/oscuro/automático, moneda, y exportar/importar un respaldo en JSON.
+- **Actualizaciones**: cuando hay una versión nueva aparece un aviso arriba y un botón en Ajustes; se aplica recién al tocar "Actualizar". También se puede buscar una versión nueva a pedido.
 
 ## Configuración
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { usePendingSync } from '../hooks/usePendingSync'
 import { pluralize } from '../lib/format'
+import { installUpdate, useUpdateStatus } from '../lib/appUpdate'
 import { Icon } from './Icon'
 import styles from '../App.module.css'
 
@@ -13,6 +14,8 @@ export function SyncBanner() {
   const online = useOnlineStatus()
   const pending = usePendingSync()
   const [slow, setSlow] = useState(false)
+  const updateAvailable = useUpdateStatus() === 'available'
+  const [updateDismissed, setUpdateDismissed] = useState(false)
   const hasPending = pending > 0
 
   useEffect(() => {
@@ -23,6 +26,24 @@ export function SyncBanner() {
       setSlow(false)
     }
   }, [hasPending])
+
+  const updateBanner = updateAvailable && !updateDismissed && (
+    <div className={`${styles.syncBanner} ${styles.updateBanner}`} role="status">
+      <Icon name="download" size={15} />
+      <span>Nueva versión disponible</span>
+      <button type="button" className={styles.updateButton} onClick={installUpdate}>
+        Actualizar
+      </button>
+      <button
+        type="button"
+        className={styles.updateDismiss}
+        onClick={() => setUpdateDismissed(true)}
+        aria-label="Ahora no"
+      >
+        <Icon name="close" size={16} />
+      </button>
+    </div>
+  )
 
   if (!online) {
     return (
@@ -47,5 +68,5 @@ export function SyncBanner() {
     )
   }
 
-  return null
+  return updateBanner || null
 }

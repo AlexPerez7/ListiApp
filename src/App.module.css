@@ -84,3 +84,44 @@
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+.updateBanner {
+  justify-content: flex-start;
+  gap: 10px;
+  padding-right: 6px;
+  background: var(--color-primary);
+  text-align: left;
+}
+
+.updateBanner > span {
+  flex: 1;
+}
+
+:root[data-theme='dark'] .updateBanner {
+  color: #0c1a15;
+}
+
+.updateButton {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: #ffffff;
+  color: #176d54;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.updateDismiss {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+}

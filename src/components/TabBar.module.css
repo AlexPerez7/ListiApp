@@ -28,6 +28,7 @@
 }
 
 .iconPill {
+  position: relative;
   width: 52px;
   height: 28px;
   display: flex;
@@ -47,9 +48,21 @@
 }
 
 .tabActive .iconPill {
+  position: relative;
   background: var(--color-primary-soft);
 }
 
 .tabActive .label {
   font-weight: 800;
+}
+
+.badge {
+  position: absolute;
+  top: 1px;
+  right: 11px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-surface);
 }

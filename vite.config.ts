@@ -27,7 +27,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': la versión nueva se descarga pero no se activa sola; la
+      // persona decide cuándo actualizar (ver src/lib/appUpdate.ts).
+      registerType: 'prompt',
       injectRegister: false,
       includeAssets: ['favicon.svg', 'favicon.png', 'apple-touch-icon.png'],
       manifest: {

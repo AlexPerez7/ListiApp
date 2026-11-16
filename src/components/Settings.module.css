@@ -169,3 +169,29 @@ button.row:active:not(:disabled) {
   font-size: 13px;
   color: var(--color-text-faint);
 }
+
+.updateButton {
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+:root[data-theme='dark'] .updateButton {
+  color: #0c1a15;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
