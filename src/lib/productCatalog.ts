@@ -96,6 +96,12 @@ export const DEFAULT_PRODUCT_CATALOG: { name: string; iconKey: string }[] = [
   { name: 'helado', iconKey: 'iceCream' },
   { name: 'hielo', iconKey: 'ice' },
 
+  // Frutos secos, semillas y untables
+  { name: 'fruta congelada', iconKey: 'frozenFruit' },
+  { name: 'pasta de maní', iconKey: 'peanutButter' },
+  { name: 'frutos secos', iconKey: 'mixedNuts' },
+  { name: 'chía', iconKey: 'chia' },
+
   // Limpieza e higiene
   { name: 'detergente', iconKey: 'cleaning' },
   { name: 'cloro', iconKey: 'bleach' },

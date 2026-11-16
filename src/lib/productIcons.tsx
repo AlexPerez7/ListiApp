@@ -78,7 +78,16 @@ import mayonnaiseImg from '../assets/products/mayonnaise.webp'
 import mustardImg from '../assets/products/mustard.webp'
 import yogurtImg from '../assets/products/yogurt.webp'
 
+import frozenFruitImg from '../assets/products/frozenFruit.webp'
+import peanutButterImg from '../assets/products/peanutButter.webp'
+import mixedNutsImg from '../assets/products/mixedNuts.webp'
+import chiaImg from '../assets/products/chia.webp'
+
 export const PHOTOS: Record<string, string> = {
+  frozenFruit: frozenFruitImg,
+  peanutButter: peanutButterImg,
+  mixedNuts: mixedNutsImg,
+  chia: chiaImg,
   broccoli: broccoliImg,
   cauliflower: cauliflowerImg,
   cream: creamImg,
