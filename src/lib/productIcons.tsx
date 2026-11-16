@@ -70,7 +70,23 @@ import tunaImg from '../assets/products/tuna.webp'
 import bleachImg from '../assets/products/bleach.webp'
 import saltImg from '../assets/products/salt.webp'
 
+import broccoliImg from '../assets/products/broccoli.webp'
+import cauliflowerImg from '../assets/products/cauliflower.webp'
+import creamImg from '../assets/products/cream.webp'
+import liquidSoapImg from '../assets/products/liquidSoap.webp'
+import mayonnaiseImg from '../assets/products/mayonnaise.webp'
+import mustardImg from '../assets/products/mustard.webp'
+import yogurtImg from '../assets/products/yogurt.webp'
+
 export const PHOTOS: Record<string, string> = {
+  broccoli: broccoliImg,
+  cauliflower: cauliflowerImg,
+  cream: creamImg,
+  liquidSoap: liquidSoapImg,
+  mayonnaise: mayonnaiseImg,
+  mustard: mustardImg,
+  yogurt: yogurtImg,
+  ketchup: condimentImg,
   apple: appleImg,
   nuggets: nuggetsImg,
   cucumber: cucumberImg,
