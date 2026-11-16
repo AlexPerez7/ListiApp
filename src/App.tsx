@@ -374,6 +374,7 @@ function Workspace({ user }: { user: User }) {
             onClearCompleted={() => handleClearCompleted(selectedList)}
             onUncheckAll={() => shopping.uncheckAll(selectedList.id)}
             onRename={(name) => shopping.updateListName(selectedList.id, name)}
+            onSetBudget={(budget, currency) => shopping.setListBudget(selectedList.id, budget, currency)}
             onDuplicate={() => handleDuplicateList(selectedList)}
             onToggleTemplate={() => handleToggleTemplate(selectedList)}
             onUseTemplate={() => handleUseTemplate(selectedList)}

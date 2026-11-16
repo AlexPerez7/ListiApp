@@ -6,7 +6,8 @@ PWA para armar listas de compras. Se instala en la pantalla de inicio del teléf
 
 - **Listas**: crear, renombrar, duplicar, eliminar (con "Deshacer") y compartir como texto.
 - **Plantillas**: guarda una lista como plantilla y úsala para crear listas nuevas con los mismos ítems.
-- **Ítems**: nombre, cantidad, precio, categoría e imagen. Toca la fila para marcarla como comprada, desliza a la izquierda para eliminar y arrastra para reordenar.
+- **Ítems**: nombre, cantidad numérica (hasta 3 decimales), unidad (unidades, kg, g, litros, ml), precio por unidad o precio total, categoría e imagen. El subtotal se calcula automáticamente en modo por unidad. Toca la fila para marcarla como comprada, desliza a la izquierda para eliminar y arrastra para reordenar.
+- **Presupuesto**: límite por lista con moneda, disponible después del carro y de toda la lista, aviso al superar el total estimado e indicación de los ítems que aún no tienen precio. No convierte importes entre monedas.
 - **Carga rápida**: el panel de agregar queda abierto para cargar varios ítems seguidos, sugiere tus compras frecuentes y los productos del catálogo, recuerda la categoría de cada producto y evita duplicados.
 - **Avance y totales**: barra de progreso por lista y totales "en el carro / por comprar" según los precios cargados.
 - **Categorías**: agrupan los ítems por pasillo; se ordenan arrastrando.
@@ -64,9 +65,9 @@ Otros comandos:
 
 ## Respaldos
 
-- Los nuevos archivos usan el formato 2: listas, categorías ordenadas, catálogo personal, tema, moneda, fotos recordadas y copias de las imágenes subidas. Las imágenes predeterminadas pertenecen a la app y no se duplican en el archivo.
+- Los nuevos archivos usan el formato 3: listas con presupuestos, cantidades numéricas, unidades y precios unitarios, categorías ordenadas, catálogo personal, tema, moneda, fotos recordadas y copias de las imágenes subidas. Las imágenes predeterminadas pertenecen a la app y no se duplican en el archivo.
 - La exportación requiere conexión y una cola sincronizada. Lee todos los datos por páginas; si una foto no puede descargarse, avisa y no genera un respaldo incompleto.
-- Se siguen aceptando respaldos del formato 1. Esos archivos solo tenían listas y enlaces de fotos: no pueden recuperar un archivo que ya no exista.
+- Se siguen aceptando respaldos de formatos 1 y 2. El formato 1 solo tenía listas y enlaces de fotos: no puede recuperar un archivo que ya no exista. Los precios sin `unitPrice` siguen siendo totales; nunca se multiplican al importar.
 - La importación agrega listas y categorías/productos que falten, conserva los existentes con el mismo nombre y aplica tema/moneda del archivo. Sube copias nuevas de las fotos a la cuenta actual. Repetir una importación duplica las listas.
 - Límite del archivo: 25 MB; cada foto embebida admite hasta aproximadamente 1 MB. Importar fotos requiere conexión.
 - Los respaldos contienen datos personales y fotos: guárdalos como cualquier otro archivo privado.
@@ -87,6 +88,19 @@ node scripts/generate-icons.mjs
 ```
 
 ## Deploy
+
+### Versión 1.3.0
+
+Antes de publicar el frontend, aplicar `supabase/migrations/20261116160000_quantities_and_budgets.sql` con el CLI o en SQL Editor del proyecto. Agrega campos opcionales y un trigger que mantiene `price` como subtotal para compatibilidad con clientes antiguos. Es repetible y no recalcula los precios existentes.
+
+- Al agregar un ítem se propone cantidad 1 y precio por unidad; el precio es opcional. También puede elegirse precio total. Por ejemplo, `0,5 kg × $3.990/kg = $1.995`.
+- Al editar un ítem antiguo, la cantidad de texto y el precio total se conservan. Convertirlo a cantidad numérica o precio por unidad es una elección explícita.
+- Definir o editar el presupuesto desde el menú de la lista o la tarjeta Presupuesto. Dejarlo vacío lo elimina; cero es un presupuesto válido. La moneda se guarda con el presupuesto. Si difiere de la moneda de Ajustes, no se comparan importes.
+- El presupuesto y los campos nuevos se sincronizan con la misma cola offline que los ítems. Duplicar listas, usar plantillas y respaldar/restaurar conservan los valores.
+- Los respaldos nuevos usan formato 3 y requieren 1.3.0 o posterior para importarse. La importación de versiones 1 y 2 sigue disponible.
+- Las pruebas incluyen la migración sobre PostgreSQL embebido (PGlite), sin escribir datos de prueba en Supabase.
+
+Para volver al frontend anterior basta revertir el commit y desplegar. Mantener las columnas nuevas: eliminarlas borraría los valores guardados y no es necesario para revertir el frontend.
 
 ### Versión 1.2.0
 

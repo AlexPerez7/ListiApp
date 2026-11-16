@@ -3,10 +3,11 @@ import { deleteItemImage } from '../lib/imageUpload'
 import { lookupProductPhoto } from '../lib/productPhotos'
 import { enqueue, whenOutboxIdle } from '../lib/outbox'
 import type { BackupPayload } from '../lib/backup'
-import type { Category, Item, ShoppingList } from '../types'
+import type { Category, Item, QuantityUnit, ShoppingList } from '../types'
 import { useSyncedCollection, type RealtimePayload } from './useSyncedCollection'
 import { readAllPages } from '../lib/pagination'
 import { normalizeProductName } from '../lib/productCatalog'
+import { itemTotal } from '../lib/pricing'
 
 
 interface DbItem {
@@ -14,6 +15,9 @@ interface DbItem {
   list_id: string
   name: string
   quantity: string | null
+  quantity_value: number | null
+  quantity_unit: QuantityUnit | null
+  unit_price: number | null
   category_id: string | null
   price: number | null
   image_url: string | null
@@ -28,6 +32,8 @@ interface DbListRow {
   name: string
   created_at: string
   is_template: boolean
+  budget: number | null
+  budget_currency: string | null
 }
 
 interface DbList extends DbListRow {
@@ -39,6 +45,9 @@ function mapItem(row: DbItem): Item {
     id: row.id,
     name: row.name,
     quantity: row.quantity ?? undefined,
+    quantityValue: row.quantity_value ?? undefined,
+    quantityUnit: row.quantity_unit ?? undefined,
+    unitPrice: row.unit_price ?? undefined,
     categoryId: row.category_id ?? undefined,
     price: row.price ?? undefined,
     imageUrl: row.image_url ?? undefined,
@@ -55,6 +64,8 @@ function mapList(row: DbList): ShoppingList {
     name: row.name,
     createdAt: new Date(row.created_at).getTime(),
     isTemplate: row.is_template,
+    budget: row.budget ?? undefined,
+    budgetCurrency: row.budget_currency ?? undefined,
     items: row.items
       .slice()
       .sort((a, b) => a.position - b.position)
@@ -68,6 +79,9 @@ function itemToRow(listId: string, item: Item) {
     list_id: listId,
     name: item.name,
     quantity: item.quantity ?? null,
+    quantity_value: item.quantityValue ?? null,
+    quantity_unit: item.quantityUnit ?? null,
+    unit_price: item.unitPrice ?? null,
     category_id: item.categoryId ?? null,
     price: item.price ?? null,
     image_url: item.imageUrl ?? null,
@@ -83,6 +97,8 @@ function listToRow(list: ShoppingList) {
     id: list.id,
     name: list.name,
     is_template: list.isTemplate,
+    budget: list.budget ?? null,
+    budget_currency: list.budgetCurrency ?? null,
     created_at: new Date(list.createdAt).toISOString(),
   }
 }
@@ -91,9 +107,9 @@ export async function fetchLists(): Promise<ShoppingList[] | null> {
   try {
     const [rows, items] = await Promise.all([
       readAllPages<DbListRow>((from, to) => supabase.from('lists')
-        .select('id, name, created_at, is_template').order('id').range(from, to)),
+        .select('id, name, created_at, is_template, budget, budget_currency').order('id').range(from, to)),
       readAllPages<DbItem>((from, to) => supabase.from('items')
-        .select('id, list_id, name, quantity, category_id, price, image_url, icon_key, position, done, created_at')
+        .select('id, list_id, name, quantity, quantity_value, quantity_unit, unit_price, category_id, price, image_url, icon_key, position, done, created_at')
         .order('id').range(from, to)),
     ])
     const byList = new Map<string, DbItem[]>()
@@ -117,7 +133,8 @@ function applyListChange(prev: ShoppingList[], payload: RealtimePayload): Shoppi
   }
 
   const row = payload.new as unknown as DbListRow
-  const fields = { name: row.name, createdAt: new Date(row.created_at).getTime(), isTemplate: row.is_template }
+  const fields = { name: row.name, createdAt: new Date(row.created_at).getTime(), isTemplate: row.is_template,
+    budget: row.budget ?? undefined, budgetCurrency: row.budget_currency ?? undefined }
   const exists = prev.some((list) => list.id === row.id)
   const next = exists
     ? prev.map((list) => (list.id === row.id ? { ...list, ...fields } : list))
@@ -155,6 +172,9 @@ const REALTIME = [
 export interface NewItemInput {
   name: string
   quantity?: string
+  quantityValue?: number
+  quantityUnit?: QuantityUnit
+  unitPrice?: number
   categoryId?: string
   price?: number
 }
@@ -210,6 +230,8 @@ export function useShoppingLists(userId: string) {
         name,
         createdAt: now,
         isTemplate: false,
+        budget: original.budget,
+        budgetCurrency: original.budgetCurrency,
         items: original.items.map((item, index) => ({
           ...item,
           id: crypto.randomUUID(),
@@ -251,10 +273,15 @@ export function useShoppingLists(userId: string) {
           name: listData.name,
           createdAt,
           isTemplate: listData.isTemplate === true,
+          budget: listData.budget,
+          budgetCurrency: listData.budgetCurrency,
           items: listData.items.map((itemData, index) => ({
             id: crypto.randomUUID(),
             name: itemData.name,
             quantity: itemData.quantity,
+            quantityValue: itemData.quantityValue,
+            quantityUnit: itemData.quantityUnit,
+            unitPrice: itemData.unitPrice,
             price: itemData.price,
             categoryId: itemData.categoryName
               ? categoryIdByName.get(normalizeProductName(itemData.categoryName))
@@ -296,14 +323,23 @@ export function useShoppingLists(userId: string) {
     })
   }
 
+  function setListBudget(listId: string, budget: number | undefined, currency: string) {
+    updateList(listId, (list) => ({ ...list, budget, budgetCurrency: budget === undefined ? undefined : currency }))
+    enqueue('guardar el presupuesto', { kind: 'update', table: 'lists',
+      values: { budget: budget ?? null, budget_currency: budget === undefined ? null : currency }, match: { id: listId } })
+  }
+
   function addItem(listId: string, input: NewItemInput) {
     const now = Date.now()
     const item: Item = {
       id: crypto.randomUUID(),
       name: input.name,
       quantity: input.quantity?.trim() || undefined,
+      quantityValue: input.quantityValue,
+      quantityUnit: input.quantityUnit,
+      unitPrice: input.unitPrice,
       categoryId: input.categoryId,
-      price: input.price,
+      price: itemTotal(input),
       done: false,
       position: now,
       createdAt: now,
@@ -334,8 +370,11 @@ export function useShoppingLists(userId: string) {
       ...item,
       name: input.name,
       quantity,
+      quantityValue: input.quantityValue,
+      quantityUnit: input.quantityUnit,
+      unitPrice: input.unitPrice,
       categoryId: input.categoryId,
-      price: input.price,
+      price: itemTotal(input),
     }))
     enqueue('editar el ítem', {
       kind: 'update',
@@ -343,8 +382,11 @@ export function useShoppingLists(userId: string) {
       values: {
         name: input.name,
         quantity: quantity ?? null,
+        quantity_value: input.quantityValue ?? null,
+        quantity_unit: input.quantityUnit ?? null,
+        unit_price: input.unitPrice ?? null,
         category_id: input.categoryId ?? null,
-        price: input.price ?? null,
+        price: itemTotal(input) ?? null,
       },
       match: { id: itemId },
     })
@@ -456,6 +498,7 @@ export function useShoppingLists(userId: string) {
     deleteList,
     restoreList,
     updateListName,
+    setListBudget,
     importBackup,
     addItem,
     updateItem,

@@ -17,7 +17,23 @@ const lists: ShoppingList[] = [
 ]
 
 describe('respaldo', () => {
-  it('conserva categorías, catálogo, preferencias y fotos embebidas en la versión 2', () => {
+  it('conserva cantidades numéricas, precios unitarios y presupuesto en formato 3', () => {
+    const restored = parseBackup(JSON.stringify(buildBackup([{ ...lists[0], budget: 5000, budgetCurrency: 'CLP', items: [
+      { ...lists[0].items[0], quantity: '0,5 kg', quantityValue: 0.5, quantityUnit: 'kg', unitPrice: 3990, price: 1995 },
+    ] }], categories)))
+    expect(restored.version).toBe(3)
+    expect(restored.lists[0]).toMatchObject({ budget: 5000, budgetCurrency: 'CLP' })
+    expect(restored.lists[0].items[0]).toMatchObject({ quantityValue: 0.5, quantityUnit: 'kg', unitPrice: 3990, price: 1995 })
+  })
+  it('acepta formato 2 y rechaza campos financieros inválidos sin reinterpretarlos', () => {
+    expect(parseBackup(JSON.stringify({ version: 2, lists: [{ name: 'Anterior', items: [{ name: 'Pan', quantity: '2', price: 3000 }] }] }))
+      .lists[0].items[0]).toMatchObject({ price: 3000, quantity: '2' })
+    expect(() => parseBackup(JSON.stringify({ version: 3, lists: [{ name: 'Compra', items: [{ name: 'Pan', quantityValue: -1, quantityUnit: 'kg' }] }] })))
+      .toThrow('cantidad o unidad inválida')
+    expect(() => parseBackup(JSON.stringify({ version: 3, lists: [{ name: 'Compra', budget: -1, budgetCurrency: 'CLP', items: [] }] })))
+      .toThrow('presupuesto inválido')
+  })
+  it('conserva categorías, catálogo, preferencias y fotos embebidas en la versión actual', () => {
     const photo = 'https://example.com/foto.jpg'
     const payload = buildBackup(lists, categories, {
       catalog: [{ id: 'p1', name: 'Avena', iconKey: 'oats', imageUrl: photo }],
@@ -26,7 +42,7 @@ describe('respaldo', () => {
     })
     payload.images = { [photo]: 'data:image/jpeg;base64,YQ==' }
     const restored = parseBackup(JSON.stringify(payload))
-    expect(restored.version).toBe(2)
+    expect(restored.version).toBe(3)
     expect(restored.categories).toEqual([{ name: 'Bebidas', icon: '🥤', position: 0 }])
     expect(restored.catalog?.[0]).toMatchObject({ name: 'Avena', iconKey: 'oats', imageUrl: photo })
     expect(restored.preferences).toEqual({ theme: 'dark', currency: 'CLP' })

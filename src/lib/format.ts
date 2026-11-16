@@ -1,4 +1,4 @@
-import { CURRENCIES } from './prefs'
+import { CURRENCIES } from './currencies'
 
 const formatters = new Map<string, Intl.NumberFormat>()
 

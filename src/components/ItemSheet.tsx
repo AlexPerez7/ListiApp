@@ -4,13 +4,15 @@ import type { NewItemInput } from '../hooks/useShoppingLists'
 import { normalizeProductName, type CatalogIcon } from '../lib/productCatalog'
 import { matchSuggestions, type ItemMemory } from '../lib/itemSuggestions'
 import { describeUploadError } from '../lib/imageUpload'
-import { currencyDecimals, parsePrice, priceToInput } from '../lib/format'
+import { readPurchaseDraft } from '../lib/pricing'
 import { usePrefs } from '../lib/prefs'
 import { BottomSheet } from './BottomSheet'
 import { Icon } from './Icon'
 import { ItemThumb } from './ItemThumb'
 import { CategoryChips, ProductIconGrid } from './Pickers'
 import styles from './ItemSheet.module.css'
+import { PurchaseFields } from './PurchaseFields'
+import { usePurchaseDraft } from '../hooks/usePurchaseDraft'
 
 interface AddItemSheetProps {
   items: Item[]
@@ -35,7 +37,8 @@ export function AddItemSheet({
   onClose,
 }: AddItemSheetProps) {
   const [name, setName] = useState('')
-  const [quantity, setQuantity] = useState('')
+  const [draft, setDraft] = usePurchaseDraft()
+  const { currency } = usePrefs()
   const [manualCategoryId, setManualCategoryId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ text: string; warn?: boolean } | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -58,9 +61,14 @@ export function AddItemSheet({
     [itemMemory.names, productCatalog, name, pendingNames],
   )
 
-  function add(rawName: string, rawQuantity: string, chosenCategoryId: string) {
+  function add(rawName: string, chosenCategoryId: string) {
     const trimmed = rawName.trim()
     if (!trimmed) return
+    let purchase
+    try { purchase = readPurchaseDraft(draft, currency) } catch (error) {
+      setNotice({ text: error instanceof Error ? error.message : 'Revisa cantidad y precio.', warn: true })
+      return
+    }
     const key = normalizeProductName(trimmed)
     const existing = items.find((item) => normalizeProductName(item.name) === key)
 
@@ -71,18 +79,18 @@ export function AddItemSheet({
       onToggleItem(existing.id)
       setNotice({ text: `«${existing.name}» volvió a pendientes` })
     } else {
-      onAdd({ name: trimmed, quantity: rawQuantity, categoryId: chosenCategoryId || undefined })
+      onAdd({ name: trimmed, ...purchase, categoryId: chosenCategoryId || undefined })
       setNotice({ text: `«${trimmed}» agregado` })
     }
 
     setName('')
-    setQuantity('')
+    setDraft({ quantity: '1', unit: 'unit', price: '', mode: 'unit' })
     setManualCategoryId(null)
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    add(name, quantity, categoryId)
+    add(name, categoryId)
     nameInputRef.current?.focus()
   }
 
@@ -106,17 +114,8 @@ export function AddItemSheet({
             aria-label="Nombre del ítem"
             autoFocus
           />
-          <input
-            className={`input ${styles.quantity}`}
-            type="text"
-            placeholder="Cant."
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            maxLength={30}
-            enterKeyHint="send"
-            aria-label="Cantidad"
-          />
         </div>
+        <PurchaseFields draft={draft} onChange={setDraft} />
 
         <div role="status">
           {notice && (
@@ -136,7 +135,7 @@ export function AddItemSheet({
                   key={suggestion}
                   type="button"
                   className={`chip ${styles.suggestion}`}
-                  onClick={() => add(suggestion, '', manualCategoryId ?? rememberedCategory(suggestion))}
+                  onClick={() => add(suggestion, manualCategoryId ?? rememberedCategory(suggestion))}
                 >
                   <ItemThumb item={{ name: suggestion }} catalog={productCatalog} size={26} />
                   {suggestion}
@@ -192,8 +191,8 @@ export function EditItemSheet({
 }: EditItemSheetProps) {
   const { currency } = usePrefs()
   const [name, setName] = useState(item.name)
-  const [quantity, setQuantity] = useState(item.quantity ?? '')
-  const [price, setPrice] = useState(() => priceToInput(item.price, currency))
+  const [draft, setDraft] = usePurchaseDraft(item)
+  const [formError, setFormError] = useState<string | null>(null)
   const [categoryId, setCategoryId] = useState(item.categoryId ?? '')
   const [pickingIcon, setPickingIcon] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -206,11 +205,15 @@ export function EditItemSheet({
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) return
+    let purchase
+    try { purchase = readPurchaseDraft(draft, currency) } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Revisa cantidad y precio.')
+      return
+    }
     onSave({
       name: trimmed,
-      quantity,
+      ...purchase,
       categoryId: categoryId || undefined,
-      price: parsePrice(price, currency),
     })
     onClose()
   }
@@ -296,33 +299,8 @@ export function EditItemSheet({
           />
         </label>
 
-        <div className={styles.row}>
-          <label className="field" style={{ flex: 1 }}>
-            <span className="field-label">Cantidad</span>
-            <input
-              className="input"
-              type="text"
-              placeholder="Ej: 2 kg"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              maxLength={30}
-              enterKeyHint="done"
-            />
-          </label>
-          <label className="field" style={{ flex: 1 }}>
-            <span className="field-label">Precio ({currency})</span>
-            <input
-              className="input"
-              type="text"
-              inputMode={currencyDecimals(currency) === 0 ? 'numeric' : 'decimal'}
-              placeholder="Opcional"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              maxLength={14}
-              enterKeyHint="done"
-            />
-          </label>
-        </div>
+        <PurchaseFields draft={draft} onChange={(next) => { setDraft(next); setFormError(null) }} />
+        {formError && <p className={`${styles.notice} ${styles.noticeWarn}`} role="alert">{formError}</p>}
 
         {categories.length > 0 && (
           <div className={styles.block}>

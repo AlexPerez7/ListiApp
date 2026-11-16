@@ -1,5 +1,8 @@
 import type { Category, ProductCatalogEntry, ShoppingList } from '../types'
 import type { Prefs } from './prefs'
+import { CURRENCIES } from './currencies'
+import { calculateSubtotal, formatQuantity, isQuantityUnit } from './pricing'
+import type { QuantityUnit } from '../types'
 
 export interface BackupProduct {
   name: string
@@ -17,6 +20,9 @@ export type BackupCategory = Pick<Category, 'name' | 'icon' | 'position'>
 export interface BackupItem {
   name: string
   quantity?: string
+  quantityValue?: number
+  quantityUnit?: QuantityUnit
+  unitPrice?: number
   price?: number
   categoryName?: string
   imageUrl?: string
@@ -27,11 +33,13 @@ export interface BackupItem {
 export interface BackupList {
   name: string
   isTemplate?: boolean
+  budget?: number
+  budgetCurrency?: string
   items: BackupItem[]
 }
 
 export interface BackupPayload {
-  version: 1 | 2
+  version: 1 | 2 | 3
   exportedAt: string
   lists: BackupList[]
   categories?: BackupCategory[]
@@ -49,7 +57,7 @@ export function buildBackup(
   const categoriesById = new Map(categories.map((c) => [c.id, c]))
 
   return {
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     categories: [...categories].sort((a, b) => a.position - b.position)
       .map(({ name, icon, position }) => ({ name, icon, position })),
@@ -59,11 +67,16 @@ export function buildBackup(
     lists: lists.map((list) => ({
       name: list.name,
       isTemplate: list.isTemplate || undefined,
+      budget: list.budget,
+      budgetCurrency: list.budgetCurrency,
       items: [...list.items]
         .sort((a, b) => a.position - b.position)
         .map((item) => ({
           name: item.name,
           quantity: item.quantity,
+          quantityValue: item.quantityValue,
+          quantityUnit: item.quantityUnit,
+          unitPrice: item.unitPrice,
           price: item.price,
           categoryName: item.categoryId ? categoriesById.get(item.categoryId)?.name : undefined,
           imageUrl: item.imageUrl,
@@ -114,11 +127,26 @@ function parseItem(raw: unknown): BackupItem | null {
   const name = optionalText(item.name)
   if (!name) return null
   const price = typeof item.price === 'number' && Number.isFinite(item.price) && item.price >= 0 ? item.price : undefined
+  let numeric: Pick<BackupItem, 'quantityValue' | 'quantityUnit' | 'unitPrice'> = {}
+  if (item.quantityValue !== undefined || item.quantityUnit !== undefined || item.unitPrice !== undefined) {
+    const amount = item.quantityValue
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0 || amount > 1_000_000 ||
+      Math.abs(amount * 1000 - Math.round(amount * 1000)) > 0.000001 || !isQuantityUnit(item.quantityUnit)) {
+      throw new Error('El respaldo contiene una cantidad o unidad inválida.')
+    }
+    const unitPrice = item.unitPrice
+    if (unitPrice !== undefined && (typeof unitPrice !== 'number' || !Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice >= 100_000_000 ||
+      Math.abs(unitPrice * 100 - Math.round(unitPrice * 100)) > 0.000001)) throw new Error('El respaldo contiene un precio unitario inválido.')
+    numeric = { quantityValue: amount, quantityUnit: item.quantityUnit, unitPrice: unitPrice as number | undefined }
+  }
+  const total = numeric.unitPrice !== undefined ? calculateSubtotal(numeric.quantityValue!, numeric.unitPrice) : price
+  if (total !== undefined && total >= 100_000_000) throw new Error('El respaldo contiene un subtotal fuera del límite permitido.')
   const imageUrl = imageLink(item.imageUrl)
   return {
     name,
-    quantity: optionalText(item.quantity),
-    price,
+    quantity: numeric.quantityValue !== undefined ? formatQuantity(numeric.quantityValue, numeric.quantityUnit!) : optionalText(item.quantity),
+    ...numeric,
+    price: total,
     categoryName: optionalText(item.categoryName),
     imageUrl,
     iconKey: optionalText(item.iconKey),
@@ -140,7 +168,7 @@ export function parseBackup(raw: string): BackupPayload {
   }
 
   const source = isRecord(data) ? data : {}
-  if (source.version !== undefined && source.version !== 1 && source.version !== 2) {
+  if (source.version !== undefined && source.version !== 1 && source.version !== 2 && source.version !== 3) {
     throw new Error('Esta versión de respaldo no es compatible. Actualiza la app.')
   }
   const rawLists = source.lists
@@ -154,9 +182,19 @@ export function parseBackup(raw: string): BackupPayload {
     const list = rawList as Record<string, unknown>
     const name = optionalText(list.name)
     if (!name || !Array.isArray(list.items)) continue
+    let budget: number | undefined
+    let budgetCurrency: string | undefined
+    if (list.budget !== undefined) {
+      if (typeof list.budget !== 'number' || !Number.isFinite(list.budget) || list.budget < 0 || list.budget >= 100_000_000 ||
+        !CURRENCIES.some((entry) => entry.code === list.budgetCurrency)) throw new Error('El respaldo contiene un presupuesto inválido.')
+      budget = list.budget
+      budgetCurrency = list.budgetCurrency as string
+    }
     lists.push({
       name,
       isTemplate: list.isTemplate === true,
+      budget,
+      budgetCurrency,
       items: list.items.map(parseItem).filter((item): item is BackupItem => item !== null),
     })
   }
@@ -166,7 +204,7 @@ export function parseBackup(raw: string): BackupPayload {
   const productPhotos: BackupPhoto[] = []
   const images: Record<string, string> = Object.create(null) as Record<string, string>
   let preferences: Prefs | undefined
-  if (source.version === 2) {
+  if (source.version === 2 || source.version === 3) {
     for (const entry of Array.isArray(source.categories) ? source.categories : []) {
       if (!isRecord(entry)) continue
       const name = optionalText(entry.name)
@@ -206,7 +244,7 @@ export function parseBackup(raw: string): BackupPayload {
   }
 
   return {
-    version: source.version === 2 ? 2 : 1, exportedAt: new Date().toISOString(), lists,
+    version: source.version === 3 ? 3 : source.version === 2 ? 2 : 1, exportedAt: new Date().toISOString(), lists,
     categories, catalog, preferences, productPhotos, images,
   }
 }

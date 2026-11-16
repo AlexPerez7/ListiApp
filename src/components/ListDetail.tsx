@@ -32,6 +32,9 @@ import { RenameSheet } from './Home'
 import { Icon } from './Icon'
 import { ItemThumb } from './ItemThumb'
 import { AddItemSheet, EditItemSheet } from './ItemSheet'
+import { BudgetSheet } from './BudgetSheet'
+import { itemTotal, QUANTITY_UNITS, sumItemTotals } from '../lib/pricing'
+import { budgetSummary } from '../lib/budget'
 import styles from './ListDetail.module.css'
 
 interface ListDetailProps {
@@ -51,6 +54,7 @@ interface ListDetailProps {
   onClearCompleted: () => void
   onUncheckAll: () => void
   onRename: (name: string) => void
+  onSetBudget: (budget: number | undefined, currency: string) => void
   onDuplicate: () => void
   onToggleTemplate: () => void
   onUseTemplate: () => void
@@ -97,7 +101,7 @@ function buildShareText(list: ShoppingList): string {
 }
 
 function sumPrices(items: Item[]): number {
-  return items.reduce((sum, item) => sum + (item.price ?? 0), 0)
+  return sumItemTotals(items)
 }
 
 const lockToVerticalAxis: Modifier = ({ transform }) => ({ ...transform, x: 0 })
@@ -119,6 +123,7 @@ export function ListDetail({
   onClearCompleted,
   onUncheckAll,
   onRename,
+  onSetBudget,
   onDuplicate,
   onToggleTemplate,
   onUseTemplate,
@@ -130,6 +135,7 @@ export function ListDetail({
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
+  const [editingBudget, setEditingBudget] = useState(false)
   const [doneCollapsed, setDoneCollapsed] = useState(false)
   const [showSwipeHint] = useState(() => !hasSeenSwipeHint())
 
@@ -150,6 +156,7 @@ export function ListDetail({
   const pendingTotal = useMemo(() => sumPrices(list.items.filter((item) => !item.done)), [list.items])
   const doneTotal = useMemo(() => sumPrices(list.items.filter((item) => item.done)), [list.items])
   const allDone = totalCount > 0 && doneCount === totalCount
+  const budget = useMemo(() => budgetSummary(list, currency), [list, currency])
   const editingItem = editingItemId ? list.items.find((item) => item.id === editingItemId) : undefined
   const firstPendingItemId = pendingGroups[0]?.items[0]?.id
 
@@ -204,6 +211,7 @@ export function ListDetail({
 
   const menuActions = [
     { label: 'Renombrar', icon: 'edit' as const, onSelect: () => setRenaming(true) },
+    { label: list.budget === undefined ? 'Definir presupuesto' : 'Editar presupuesto', icon: 'coins' as const, onSelect: () => setEditingBudget(true) },
     { label: 'Compartir', icon: 'share' as const, onSelect: () => void handleShare() },
     ...(doneCount > 0
       ? [
@@ -282,6 +290,27 @@ export function ListDetail({
           )}
         </section>
       )}
+
+      {!list.isTemplate && (
+        <section className={`${styles.summary} ${budget.projectedRemaining !== undefined && budget.projectedRemaining < 0 ? styles.budgetExceeded : ''}`} aria-label="Presupuesto">
+          <div className={styles.summaryTop}>
+            <strong>{list.budget === undefined ? 'Presupuesto' : formatPrice(list.budget, list.budgetCurrency ?? currency)}</strong>
+            <button type="button" className="chip" onClick={() => setEditingBudget(true)}>{list.budget === undefined ? 'Definir' : 'Editar'}</button>
+          </div>
+          {list.budget !== undefined && !budget.matchesCurrency ? (
+            <p>El presupuesto está en {list.budgetCurrency}. Usa esa moneda en Ajustes o edita el presupuesto para compararlo.</p>
+          ) : budget.remaining !== undefined ? (
+            <>
+              <p role="status">{budget.remaining >= 0 ? 'Disponible después del carro' : 'Exceso en el carro'}: {formatPrice(Math.abs(budget.remaining), currency)}</p>
+              {budget.projectedRemaining !== undefined && budget.projectedRemaining < 0 ? (
+                <p role="status">El total estimado supera el presupuesto por {formatPrice(-budget.projectedRemaining, currency)}.</p>
+              ) : <p>Disponible después de toda la lista: {formatPrice(budget.projectedRemaining ?? 0, currency)}</p>}
+              {budget.unpriced > 0 && <small>{pluralize(budget.unpriced, 'ítem sin precio', 'ítems sin precio')}. El cálculo está incompleto.</small>}
+            </>
+          ) : <p>Define un límite para comparar el carro y el total estimado.</p>}
+        </section>
+      )}
+      {editingBudget && <BudgetSheet list={list} onSave={onSetBudget} onClose={() => setEditingBudget(false)} />}
 
       {totalCount >= SEARCH_MIN_ITEMS && (
         <label className="search">
@@ -478,7 +507,11 @@ const ItemRow = memo(function ItemRow({
     return () => window.clearTimeout(timer)
   }, [showSwipeHint, peek])
 
-  const meta = [item.quantity, item.price != null ? formatPrice(item.price, currency) : null].filter(Boolean)
+  const subtotal = itemTotal(item)
+  const per = QUANTITY_UNITS.find((entry) => entry.value === item.quantityUnit)?.per ?? 'unidad'
+  const meta = [item.quantity,
+    item.unitPrice !== undefined ? `${formatPrice(item.unitPrice, currency)}/${per}` : null,
+    subtotal != null ? `${item.unitPrice !== undefined ? '= ' : ''}${formatPrice(subtotal, currency)}` : null].filter(Boolean)
 
   return (
     <li
@@ -505,7 +538,7 @@ const ItemRow = memo(function ItemRow({
           type="button"
           role="checkbox"
           aria-checked={item.done}
-          aria-label={`${item.name}${item.quantity ? `, ${item.quantity}` : ''}`}
+          aria-label={`${item.name}${item.quantity ? `, ${item.quantity}` : ''}${subtotal !== undefined ? `, total ${formatPrice(subtotal, currency)}` : ''}`}
           className={styles.itemMain}
           onClick={() => onToggle(item.id)}
         >

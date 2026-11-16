@@ -2,6 +2,9 @@ export interface Item {
   id: string
   name: string
   quantity?: string
+  quantityValue?: number
+  quantityUnit?: QuantityUnit
+  unitPrice?: number
   price?: number
   categoryId?: string
   imageUrl?: string
@@ -17,7 +20,11 @@ export interface ShoppingList {
   items: Item[]
   createdAt: number
   isTemplate: boolean
+  budget?: number
+  budgetCurrency?: string
 }
+
+export type QuantityUnit = 'unit' | 'kg' | 'g' | 'l' | 'ml'
 
 export interface Category {
   id: string

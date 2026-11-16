@@ -89,6 +89,11 @@
   justify-content: space-between;
 }
 
+.budgetExceeded {
+  border: 1px solid var(--color-accent-strong);
+  background: var(--color-accent-soft);
+}
+
 .summaryCount {
   font-size: 15px;
   color: var(--color-text-secondary);
@@ -348,9 +353,7 @@
 .itemMeta {
   font-size: 13.5px;
   color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .itemDone {
