@@ -17,11 +17,11 @@ const lists: ShoppingList[] = [
 ]
 
 describe('respaldo', () => {
-  it('conserva cantidades numéricas, precios unitarios y presupuesto en formato 3', () => {
+  it('conserva cantidades numéricas, precios unitarios y presupuesto en formato actual', () => {
     const restored = parseBackup(JSON.stringify(buildBackup([{ ...lists[0], budget: 5000, budgetCurrency: 'CLP', items: [
       { ...lists[0].items[0], quantity: '0,5 kg', quantityValue: 0.5, quantityUnit: 'kg', unitPrice: 3990, price: 1995 },
     ] }], categories)))
-    expect(restored.version).toBe(3)
+    expect(restored.version).toBe(4)
     expect(restored.lists[0]).toMatchObject({ budget: 5000, budgetCurrency: 'CLP' })
     expect(restored.lists[0].items[0]).toMatchObject({ quantityValue: 0.5, quantityUnit: 'kg', unitPrice: 3990, price: 1995 })
   })
@@ -42,7 +42,7 @@ describe('respaldo', () => {
     })
     payload.images = { [photo]: 'data:image/jpeg;base64,YQ==' }
     const restored = parseBackup(JSON.stringify(payload))
-    expect(restored.version).toBe(3)
+    expect(restored.version).toBe(4)
     expect(restored.categories).toEqual([{ name: 'Bebidas', icon: '🥤', position: 0 }])
     expect(restored.catalog?.[0]).toMatchObject({ name: 'Avena', iconKey: 'oats', imageUrl: photo })
     expect(restored.preferences).toEqual({ theme: 'dark', currency: 'CLP' })

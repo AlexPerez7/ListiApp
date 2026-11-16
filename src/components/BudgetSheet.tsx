@@ -9,7 +9,8 @@ export function BudgetSheet({ list, onSave, onClose }: {
   onSave: (budget: number | undefined, currency: string) => void
   onClose: () => void
 }) {
-  const { currency } = usePrefs()
+  const preferences = usePrefs()
+  const currency = list.currency ?? preferences.currency
   const [amount, setAmount] = useState(() => list.budgetCurrency === currency ? priceToInput(list.budget, currency) : '')
   const [error, setError] = useState<string | null>(null)
   function submit(event: FormEvent) {

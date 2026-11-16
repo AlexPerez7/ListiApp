@@ -3,8 +3,9 @@ import { QUANTITY_UNITS, readPurchaseDraft, type PurchaseDraft } from '../lib/pr
 import { usePrefs } from '../lib/prefs'
 import styles from './ItemSheet.module.css'
 
-export function PurchaseFields({ draft, onChange }: { draft: PurchaseDraft; onChange: (draft: PurchaseDraft) => void }) {
-  const { currency } = usePrefs()
+export function PurchaseFields({ draft, onChange, currency: selectedCurrency }: { draft: PurchaseDraft; onChange: (draft: PurchaseDraft) => void; currency?: string }) {
+  const preferences = usePrefs()
+  const currency = selectedCurrency ?? preferences.currency
   const per = QUANTITY_UNITS.find((entry) => entry.value === draft.unit)!.per
   let subtotal: number | undefined
   try { subtotal = readPurchaseDraft(draft, currency).price } catch { /* El formulario muestra errores al guardar. */ }

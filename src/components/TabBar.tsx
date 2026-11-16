@@ -12,6 +12,7 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'lists', label: 'Listas', icon: 'list' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'products', label: 'Productos', icon: 'cart' },
+  { id: 'history', label: 'Historial', icon: 'history' },
   { id: 'settings', label: 'Ajustes', icon: 'settings' },
 ]
 

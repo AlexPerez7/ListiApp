@@ -4,8 +4,9 @@ import { priceToInput } from '../lib/format'
 import { usePrefs } from '../lib/prefs'
 import type { PurchaseDraft } from '../lib/pricing'
 
-export function usePurchaseDraft(item?: Item) {
-  const { currency } = usePrefs()
+export function usePurchaseDraft(item?: Item, selectedCurrency?: string) {
+  const preferences = usePrefs()
+  const currency = selectedCurrency ?? preferences.currency
   return useState<PurchaseDraft>(() => ({
     quantity: String(item?.quantityValue ?? 1).replace('.', ','),
     unit: item?.quantityUnit ?? 'unit',

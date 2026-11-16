@@ -1,4 +1,4 @@
-import type { Category, ProductCatalogEntry, ShoppingList } from '../types'
+import type { Category, ProductCatalogEntry, Purchase, ShoppingList } from '../types'
 import type { Prefs } from './prefs'
 import { CURRENCIES } from './currencies'
 import { calculateSubtotal, formatQuantity, isQuantityUnit } from './pricing'
@@ -35,11 +35,13 @@ export interface BackupList {
   isTemplate?: boolean
   budget?: number
   budgetCurrency?: string
+  currency?: string
   items: BackupItem[]
 }
 
 export interface BackupPayload {
-  version: 1 | 2 | 3
+  version: 1 | 2 | 3 | 4
+  purchases?: Purchase[]
   exportedAt: string
   lists: BackupList[]
   categories?: BackupCategory[]
@@ -52,12 +54,13 @@ export interface BackupPayload {
 
 export function buildBackup(
   lists: ShoppingList[], categories: Category[],
-  options: { catalog?: ProductCatalogEntry[]; preferences?: Prefs; productPhotos?: BackupPhoto[] } = {},
+  options: { catalog?: ProductCatalogEntry[]; preferences?: Prefs; productPhotos?: BackupPhoto[]; purchases?: Purchase[] } = {},
 ): BackupPayload {
   const categoriesById = new Map(categories.map((c) => [c.id, c]))
 
   return {
-    version: 3,
+    version: 4,
+    purchases: options.purchases?.map((entry) => ({ ...entry, pending: undefined })) ?? [],
     exportedAt: new Date().toISOString(),
     categories: [...categories].sort((a, b) => a.position - b.position)
       .map(({ name, icon, position }) => ({ name, icon, position })),
@@ -69,6 +72,7 @@ export function buildBackup(
       isTemplate: list.isTemplate || undefined,
       budget: list.budget,
       budgetCurrency: list.budgetCurrency,
+      currency: list.currency,
       items: [...list.items]
         .sort((a, b) => a.position - b.position)
         .map((item) => ({
@@ -168,7 +172,7 @@ export function parseBackup(raw: string): BackupPayload {
   }
 
   const source = isRecord(data) ? data : {}
-  if (source.version !== undefined && source.version !== 1 && source.version !== 2 && source.version !== 3) {
+  if (source.version !== undefined && source.version !== 1 && source.version !== 2 && source.version !== 3 && source.version !== 4) {
     throw new Error('Esta versión de respaldo no es compatible. Actualiza la app.')
   }
   const rawLists = source.lists
@@ -190,11 +194,13 @@ export function parseBackup(raw: string): BackupPayload {
       budget = list.budget
       budgetCurrency = list.budgetCurrency as string
     }
+    if (list.currency !== undefined && !CURRENCIES.some((entry) => entry.code === list.currency)) throw new Error("El respaldo contiene una moneda inválida.")
     lists.push({
       name,
       isTemplate: list.isTemplate === true,
       budget,
       budgetCurrency,
+      currency: list.currency as string | undefined,
       items: list.items.map(parseItem).filter((item): item is BackupItem => item !== null),
     })
   }
@@ -204,7 +210,7 @@ export function parseBackup(raw: string): BackupPayload {
   const productPhotos: BackupPhoto[] = []
   const images: Record<string, string> = Object.create(null) as Record<string, string>
   let preferences: Prefs | undefined
-  if (source.version === 2 || source.version === 3) {
+  if (source.version === 2 || source.version === 3 || source.version === 4) {
     for (const entry of Array.isArray(source.categories) ? source.categories : []) {
       if (!isRecord(entry)) continue
       const name = optionalText(entry.name)
@@ -239,12 +245,35 @@ export function parseBackup(raw: string): BackupPayload {
     }
   }
 
-  if (lists.length === 0 && categories.length === 0 && catalog.length === 0 && !preferences && productPhotos.length === 0) {
+  const purchases: Purchase[] = []
+  for (const raw of source.version === 4 && Array.isArray(source.purchases) ? source.purchases : []) {
+    if (!isRecord(raw) || !optionalText(raw.name) || !CURRENCIES.some((entry) => entry.code === raw.currency) ||
+      typeof raw.completedAt !== 'number' || !Number.isFinite(raw.completedAt) || !Number.isFinite(new Date(raw.completedAt).getTime()) ||
+      !Array.isArray(raw.items) || raw.items.length > 10000) throw new Error('El respaldo contiene una compra inválida.')
+    const items = raw.items.map((value, index) => {
+      const item = parseItem(value)
+      if (!item || !isRecord(value) || typeof value.done !== 'boolean') throw new Error('El historial contiene un producto inválido.')
+      if (item.price !== undefined && Math.abs(item.price * 100 - Math.round(item.price * 100)) > 0.000001) throw new Error('El historial contiene un precio inválido.')
+      return { id: crypto.randomUUID(), name: item.name, quantity: item.quantity, quantityValue: item.quantityValue,
+        quantityUnit: item.quantityUnit, unitPrice: item.unitPrice, price: item.price, done: item.done,
+        iconKey: item.iconKey, categoryName: item.categoryName, position: index }
+    })
+    const bought = items.filter((item) => item.done)
+    if (!bought.length) throw new Error('Una compra del historial no tiene productos comprados.')
+    if (raw.budget !== undefined && (typeof raw.budget !== 'number' || !Number.isFinite(raw.budget) || raw.budget < 0 ||
+      raw.budget >= 100_000_000 || !CURRENCIES.some((entry) => entry.code === raw.budgetCurrency))) throw new Error('El historial contiene un presupuesto inválido.')
+    purchases.push({ id: crypto.randomUUID(), name: optionalText(raw.name)!, currency: raw.currency as string, completedAt: raw.completedAt,
+      total: Math.round(bought.reduce((sum, item) => sum + (item.price ?? 0), 0) * 100) / 100,
+      purchasedCount: bought.length, unpricedCount: bought.filter((item) => item.price === undefined).length,
+      items, budget: raw.budget as number | undefined, budgetCurrency: raw.budget === undefined ? undefined : raw.budgetCurrency as string })
+  }
+
+  if (lists.length === 0 && categories.length === 0 && catalog.length === 0 && !preferences && productPhotos.length === 0 && purchases.length === 0) {
     throw new Error('El archivo no contiene listas para importar.')
   }
 
   return {
-    version: source.version === 3 ? 3 : source.version === 2 ? 2 : 1, exportedAt: new Date().toISOString(), lists,
+    purchases, version: source.version === 4 ? 4 : source.version === 3 ? 3 : source.version === 2 ? 2 : 1, exportedAt: new Date().toISOString(), lists,
     categories, catalog, preferences, productPhotos, images,
   }
 }

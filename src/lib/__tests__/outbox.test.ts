@@ -12,6 +12,7 @@ function nextResult(call: string): Promise<Result> {
 
 vi.mock('../supabaseClient', () => ({
   supabase: {
+    rpc: (fn: string) => nextResult(`rpc ${fn}`),
     from: (table: string) => ({
       upsert: () => nextResult(`upsert ${table}`),
       update: () => {
@@ -41,6 +42,27 @@ afterEach(() => {
 })
 
 describe('cola de cambios', () => {
+  it('finaliza tras enviar los cambios y notifica una recarga sin Realtime', async () => {
+    outbox.setOutboxUser('u1')
+    const refresh = vi.fn(); const unsubscribe = outbox.onOutboxRecovery(refresh)
+    outbox.enqueue('marcar', { kind: 'update', table: 'items', values: { done: true }, match: { id: 'i1' } })
+    outbox.enqueue('finalizar', { kind: 'rpc', fn: 'finish_purchase', args: { p_list_id: 'l1', p_purchase_id: 'p1' } })
+    expect(outbox.isFinishQueued('l1')).toBe(true)
+    await outbox.whenOutboxIdle()
+    expect(calls).toEqual(['update items', 'rpc finish_purchase'])
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(outbox.isFinishQueued('l1')).toBe(false); unsubscribe()
+  })
+  it('conserva el cierre para revisar si hubo un rechazo previo', async () => {
+    results.push({ error: { message: 'rechazado' }, status: 403 })
+    outbox.setOutboxUser('u1')
+    outbox.enqueue('marcar', { kind: 'update', table: 'items', values: { done: true }, match: { id: 'i1' } })
+    outbox.enqueue('finalizar', { kind: 'rpc', fn: 'finish_purchase', args: { p_list_id: 'l1', p_purchase_id: 'p1' } })
+    await outbox.whenOutboxIdle()
+    expect(calls).toEqual(['update items'])
+    expect(outbox.getFailedCount()).toBe(2)
+    expect(outbox.getFailedChanges()[1].op).toMatchObject({ kind: 'rpc', args: { p_purchase_id: 'p1' } })
+  })
   it('conserva una edición cuyo registro ya no existe, sin confundirla con un guardado exitoso', async () => {
     results.push({ error: null, status: 200, count: 0 })
     outbox.setOutboxUser('u1')

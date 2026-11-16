@@ -13,6 +13,7 @@ vi.mock('../../hooks/useCategories', () => ({ useCategories: () => ({ categories
 vi.mock('../../hooks/useProductCatalog', () => ({ useProductCatalog: () => ({ catalog: [], loading: false }), fetchCatalog: vi.fn() }))
 vi.mock('../../hooks/useRoute', () => ({ useRoute: () => ({ route: { tab: 'settings', listId: null }, setTab: vi.fn() }) }))
 vi.mock('../../components/Settings', () => ({ Settings: ({ onSignOut }: { onSignOut: () => void }) => <button onClick={onSignOut}>Salir</button> }))
+vi.mock('../../hooks/usePurchaseHistory', () => ({ usePurchaseHistory: () => ({ purchases: [], loading: false }), fetchPurchaseHistory: vi.fn() }))
 const outbox = await import('../outbox')
 const { writeCache, readCache } = await import('../cache')
 const { default: Workspace } = await import('../../Workspace')

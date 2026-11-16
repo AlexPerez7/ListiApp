@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
+import { fetchPurchaseHistory, usePurchaseHistory } from './hooks/usePurchaseHistory'
+import { previewPurchase, purchaseFingerprint } from './lib/purchases'
 import { fetchLists, useShoppingLists } from './hooks/useShoppingLists'
 import { fetchCategories, useCategories } from './hooks/useCategories'
 import { fetchCatalog, useProductCatalog } from './hooks/useProductCatalog'
@@ -14,7 +16,7 @@ import { embedBackupImages, restoreBackupImages } from './lib/backupImages'
 import { readAllPages } from './lib/pagination'
 import { CURRENCIES, setCurrency, setTheme, usePrefs } from './lib/prefs'
 import { clearCache } from './lib/cache'
-import { enqueue, getFailedCount, getOutboxUser, getOutboxVersion, getPendingCount, onOutboxError, saveOutbox, whenOutboxIdle } from './lib/outbox'
+import { enqueue, isFinishQueued, getFailedCount, getOutboxUser, getOutboxVersion, getPendingCount, onOutboxError, saveOutbox, whenOutboxIdle } from './lib/outbox'
 import { showToast } from './lib/toast'
 import { confirmDialog } from './lib/confirm'
 import { pluralize } from './lib/format'
@@ -27,6 +29,7 @@ import styles from './App.module.css'
 
 import { ScreenLoading } from './components/ScreenLoading'
 
+const History = lazy(() => import('./components/History').then((module) => ({ default: module.History })))
 const Home = lazy(() => import('./components/Home').then((module) => ({ default: module.Home })))
 const Categories = lazy(() => import('./components/Categories').then((module) => ({ default: module.Categories })))
 const Products = lazy(() => import('./components/Products').then((module) => ({ default: module.Products })))
@@ -47,6 +50,7 @@ export default function Workspace({ user }: { user: User }) {
   const [reviewingSync, setReviewingSync] = useState(false)
   const { route, openList, closeList, setTab } = useRoute()
 
+  const history = usePurchaseHistory(userId)
   const shopping = useShoppingLists(userId)
   const { lists, loading } = shopping
   const {
@@ -85,6 +89,20 @@ export default function Workspace({ user }: { user: User }) {
   useEffect(() => {
     if (listMissing) closeList()
   }, [listMissing, closeList])
+
+  function handleFinish(list: ShoppingList, currency: string) {
+    if (!activeRef.current || getOutboxUser() !== userId || isFinishQueued(list.id)) return
+    if (getFailedCount() > 0) { showToast({ kind: 'error', message: 'Revisa los cambios rechazados antes de finalizar la compra.' }); return }
+    if (!list.items.some((item) => item.done)) return
+    const id = crypto.randomUUID()
+    history.addPreview(previewPurchase(list, currency, categories, catalogMap, id))
+    shopping.archiveLocally(list.id)
+    enqueue(`finalizar la compra «${list.name}»`, { kind: 'rpc', fn: 'finish_purchase', args: {
+      p_list_id: list.id, p_purchase_id: id, p_currency: currency, p_expected: purchaseFingerprint(list),
+    } })
+    setTab('history')
+    showToast({ message: 'Compra guardada en este dispositivo. Se confirmará al sincronizar.' })
+  }
 
   function handleDeleteItem(list: ShoppingList, item: Item) {
     shopping.deleteItem(list.id, item.id)
@@ -157,6 +175,7 @@ export default function Workspace({ user }: { user: User }) {
 
   async function handleUploadItemImage(listId: string, itemId: string, file: File) {
     const url = await uploadItemImage(userId, itemId, file)
+    if (!activeRef.current || getOutboxUser() !== userId || isFinishQueued(listId)) return
     shopping.setItemImage(listId, itemId, url)
     const itemName = lists.find((l) => l.id === listId)?.items.find((i) => i.id === itemId)?.name
     if (itemName) void rememberProductPhoto(itemName, url)
@@ -192,14 +211,15 @@ export default function Workspace({ user }: { user: User }) {
       if (getPendingCount() > 0) throw new Error('Espera a que se sincronicen tus cambios antes de exportar.')
       if (getFailedCount() > 0) throw new Error('Revisa los cambios rechazados antes de exportar un respaldo completo.')
       const version = getOutboxVersion()
-      const [allLists, allCategories, allProducts, photos] = await Promise.all([
+      const [allLists, allCategories, allProducts, photos, allPurchases] = await Promise.all([
         fetchLists(), fetchCategories(), fetchCatalog(),
         readAllPages<{ name_key: string; image_url: string }>((from, to) => supabase.from('product_photos')
           .select('name_key, image_url').order('id').range(from, to)),
+        fetchPurchaseHistory(),
       ])
-      if (!allLists || !allCategories || !allProducts) throw new Error('No se pudieron cargar todos tus datos. Intenta de nuevo.')
+      if (!allLists || !allCategories || !allProducts || !allPurchases) throw new Error('No se pudieron cargar todos tus datos. Intenta de nuevo.')
       const payload = await embedBackupImages(buildBackup(allLists, allCategories, {
-        catalog: allProducts, preferences,
+        catalog: allProducts, preferences, purchases: allPurchases,
         productPhotos: photos.map((photo) => ({ nameKey: photo.name_key, imageUrl: photo.image_url })),
       }))
       if (version !== getOutboxVersion()) throw new Error('Tus datos cambiaron durante la exportación. Vuelve a exportar.')
@@ -223,7 +243,7 @@ export default function Workspace({ user }: { user: User }) {
       let payload = parseBackup(await file.text())
       const confirmed = await confirmDialog({
         title: '¿Importar respaldo?',
-        message: 'Se agregarán las listas y los productos y categorías que falten. Los existentes con el mismo nombre se conservarán. Se aplicarán el tema y la moneda del respaldo, si los incluye.',
+        message: 'Se agregarán las listas, el historial y los productos y categorías que falten. Los existentes con el mismo nombre se conservarán. Se aplicarán el tema y la moneda del respaldo, si los incluye.',
         confirmLabel: 'Importar',
         danger: false,
       })
@@ -255,11 +275,12 @@ export default function Workspace({ user }: { user: User }) {
           values: { name_key: photo.nameKey, image_url: photo.imageUrl }, onConflict: 'user_id,name_key' })
       }
       const count = shopping.importBackup(payload, restoredCategories)
+      history.importPurchases(payload.purchases ?? [])
       if (payload.preferences) {
         setTheme(payload.preferences.theme)
         if (CURRENCIES.some((entry) => entry.code === payload.preferences!.currency)) setCurrency(payload.preferences.currency)
       }
-      showToast({ kind: 'success', message: `Respaldo agregado: ${pluralize(count, 'lista', 'listas')}. Los cambios pendientes se sincronizarán.` })
+      showToast({ kind: 'success', message: `Respaldo agregado: ${pluralize(count, 'lista', 'listas')} y ${(payload.purchases ?? []).length} compras del historial. Los cambios pendientes se sincronizarán.` })
       setTab('lists')
     } catch (err) {
       showToast({
@@ -325,6 +346,8 @@ export default function Workspace({ user }: { user: User }) {
             onClearCompleted={() => handleClearCompleted(selectedList)}
             onUncheckAll={() => shopping.uncheckAll(selectedList.id)}
             onRename={(name) => shopping.updateListName(selectedList.id, name)}
+            onFinish={(currency) => handleFinish(selectedList, currency)}
+            onSetCurrency={(currency) => shopping.setListCurrency(selectedList.id, currency)}
             onSetBudget={(budget, currency) => shopping.setListBudget(selectedList.id, budget, currency)}
             onDuplicate={() => handleDuplicateList(selectedList)}
             onToggleTemplate={() => handleToggleTemplate(selectedList)}
@@ -353,7 +376,7 @@ export default function Workspace({ user }: { user: User }) {
             lists={lists}
             loading={loading}
             productCatalog={catalogMap}
-            onCreateList={(name) => openList(shopping.createList(name))}
+            onCreateList={(name) => openList(shopping.createList(name, preferences.currency))}
             onSelectList={openList}
             onRenameList={shopping.updateListName}
             onDuplicateList={handleDuplicateList}
@@ -361,6 +384,8 @@ export default function Workspace({ user }: { user: User }) {
             onToggleTemplate={handleToggleTemplate}
             onUseTemplate={handleUseTemplate}
           />
+        ) : route.tab === 'history' ? (
+          <History purchases={history.purchases} loading={history.loading} onRepeat={(purchase) => openList(shopping.repeatPurchase(purchase, categories))} />
         ) : route.tab === 'categories' ? (
           <Categories
             categories={categories}

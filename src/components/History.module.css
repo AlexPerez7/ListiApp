@@ -1,0 +1,11 @@
+.header { margin: 12px 0 24px; }
+.header h1 { font-size: 28px; margin-bottom: 8px; }
+.header p, .card time, .card small, .items small { color: var(--color-text-secondary); }
+.cards { display: grid; gap: 12px; margin-top: 20px; }
+.card { display: flex; flex-direction: column; gap: 8px; text-align: left; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 18px; padding: 18px; overflow-wrap: anywhere; }
+.cardTop { display: flex; justify-content: space-between; gap: 12px; }
+.cardTop strong { font-size: 18px; }
+.card time, .card small { font-size: 12px; }
+.items { list-style: none; padding: 0; }
+.items li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+.items small { display: block; margin-top: 4px; }

@@ -89,7 +89,7 @@ export function Settings({ email, backupBusy, backupStatus, onExport, onImport, 
           </div>
           <label className={styles.row}>
             <Icon name="coins" size={20} />
-            <span className={styles.rowLabel}>Moneda</span>
+            <span className={styles.rowLabel}>Moneda<small>Para listas nuevas; las existentes conservan su moneda</small></span>
             <select
               className={styles.select}
               value={currency}
@@ -113,7 +113,7 @@ export function Settings({ email, backupBusy, backupStatus, onExport, onImport, 
             <Icon name="download" size={20} />
             <span className={styles.rowLabel}>
               Exportar respaldo
-              <small>{!online ? 'Necesitas conexión para incluir todas las fotos' : failed > 0 ? 'Revisa los cambios rechazados antes de exportar' : pending > 0 ? 'Espera a que se sincronicen los cambios' : 'Listas, categorías, productos, preferencias y fotos'}</small>
+              <small>{!online ? 'Necesitas conexión para incluir todas las fotos' : failed > 0 ? 'Revisa los cambios rechazados antes de exportar' : pending > 0 ? 'Espera a que se sincronicen los cambios' : 'Listas, historial, categorías, productos, preferencias y fotos'}</small>
             </span>
             <Icon name="chevronRight" size={18} className={styles.chevron} />
           </button>

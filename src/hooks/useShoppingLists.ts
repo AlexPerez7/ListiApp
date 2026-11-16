@@ -1,9 +1,11 @@
+import { useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { deleteItemImage } from '../lib/imageUpload'
 import { lookupProductPhoto } from '../lib/productPhotos'
-import { enqueue, whenOutboxIdle } from '../lib/outbox'
+import { enqueue, getOutboxUser, isFinishQueued, whenOutboxIdle } from '../lib/outbox'
 import type { BackupPayload } from '../lib/backup'
-import type { Category, Item, QuantityUnit, ShoppingList } from '../types'
+import type { Category, Item, Purchase, QuantityUnit, ShoppingList } from '../types'
+import { repeatedPurchase } from '../lib/purchases'
 import { useSyncedCollection, type RealtimePayload } from './useSyncedCollection'
 import { readAllPages } from '../lib/pagination'
 import { normalizeProductName } from '../lib/productCatalog'
@@ -34,6 +36,8 @@ interface DbListRow {
   is_template: boolean
   budget: number | null
   budget_currency: string | null
+  currency: string | null
+  archived_at: string | null
 }
 
 interface DbList extends DbListRow {
@@ -66,6 +70,7 @@ function mapList(row: DbList): ShoppingList {
     isTemplate: row.is_template,
     budget: row.budget ?? undefined,
     budgetCurrency: row.budget_currency ?? undefined,
+    currency: row.currency ?? undefined,
     items: row.items
       .slice()
       .sort((a, b) => a.position - b.position)
@@ -99,6 +104,7 @@ function listToRow(list: ShoppingList) {
     is_template: list.isTemplate,
     budget: list.budget ?? null,
     budget_currency: list.budgetCurrency ?? null,
+    currency: list.currency ?? null,
     created_at: new Date(list.createdAt).toISOString(),
   }
 }
@@ -107,9 +113,10 @@ export async function fetchLists(): Promise<ShoppingList[] | null> {
   try {
     const [rows, items] = await Promise.all([
       readAllPages<DbListRow>((from, to) => supabase.from('lists')
-        .select('id, name, created_at, is_template, budget, budget_currency').order('id').range(from, to)),
+        .select('id, name, created_at, is_template, budget, budget_currency, currency, archived_at').is('archived_at', null).order('id').range(from, to)),
       readAllPages<DbItem>((from, to) => supabase.from('items')
-        .select('id, list_id, name, quantity, quantity_value, quantity_unit, unit_price, category_id, price, image_url, icon_key, position, done, created_at')
+        .select('id, list_id, name, quantity, quantity_value, quantity_unit, unit_price, category_id, price, image_url, icon_key, position, done, created_at, lists!inner(archived_at)')
+        .is('lists.archived_at', null)
         .order('id').range(from, to)),
     ])
     const byList = new Map<string, DbItem[]>()
@@ -133,8 +140,9 @@ function applyListChange(prev: ShoppingList[], payload: RealtimePayload): Shoppi
   }
 
   const row = payload.new as unknown as DbListRow
+  if (row.archived_at) return prev.filter((list) => list.id !== row.id)
   const fields = { name: row.name, createdAt: new Date(row.created_at).getTime(), isTemplate: row.is_template,
-    budget: row.budget ?? undefined, budgetCurrency: row.budget_currency ?? undefined }
+    budget: row.budget ?? undefined, budgetCurrency: row.budget_currency ?? undefined, currency: row.currency ?? undefined }
   const exists = prev.some((list) => list.id === row.id)
   const next = exists
     ? prev.map((list) => (list.id === row.id ? { ...list, ...fields } : list))
@@ -186,6 +194,8 @@ export function useShoppingLists(userId: string) {
     fetchAll: fetchLists,
     realtime: REALTIME,
   })
+  const listsRef = useRef(lists)
+  useEffect(() => { listsRef.current = lists }, [lists])
 
   function updateList(listId: string, change: (list: ShoppingList) => ShoppingList) {
     setLists((prev) => prev.map((list) => (list.id === listId ? change(list) : list)))
@@ -215,9 +225,9 @@ export function useShoppingLists(userId: string) {
     }
   }
 
-  function createList(name: string): string {
+  function createList(name: string, currency: string): string {
     const id = crypto.randomUUID()
-    insertList({ id, name, items: [], createdAt: Date.now(), isTemplate: false }, 'crear la lista')
+    insertList({ id, name, currency, items: [], createdAt: Date.now(), isTemplate: false }, 'crear la lista')
     return id
   }
 
@@ -232,6 +242,7 @@ export function useShoppingLists(userId: string) {
         isTemplate: false,
         budget: original.budget,
         budgetCurrency: original.budgetCurrency,
+        currency: original.currency,
         items: original.items.map((item, index) => ({
           ...item,
           id: crypto.randomUUID(),
@@ -275,6 +286,7 @@ export function useShoppingLists(userId: string) {
           isTemplate: listData.isTemplate === true,
           budget: listData.budget,
           budgetCurrency: listData.budgetCurrency,
+          currency: listData.currency,
           items: listData.items.map((itemData, index) => ({
             id: crypto.randomUUID(),
             name: itemData.name,
@@ -329,6 +341,19 @@ export function useShoppingLists(userId: string) {
       values: { budget: budget ?? null, budget_currency: budget === undefined ? null : currency }, match: { id: listId } })
   }
 
+  function setListCurrency(listId: string, currency: string) {
+    updateList(listId, (list) => ({ ...list, currency }))
+    enqueue('confirmar la moneda de la lista', { kind: 'update', table: 'lists', values: { currency }, match: { id: listId } })
+  }
+
+  function archiveLocally(listId: string) { setLists((previous) => previous.filter((list) => list.id !== listId)) }
+
+  function repeatPurchase(purchase: Purchase, categories: Category[]): string {
+    const list = repeatedPurchase(purchase, categories)
+    insertList(list, `repetir la compra «${purchase.name}»`)
+    return list.id
+  }
+
   function addItem(listId: string, input: NewItemInput) {
     const now = Date.now()
     const item: Item = {
@@ -353,6 +378,8 @@ export function useShoppingLists(userId: string) {
     if (navigator.onLine) {
       void lookupProductPhoto(item.name).then((imageUrl) => {
         if (!imageUrl) return
+        if (getOutboxUser() !== userId || isFinishQueued(listId) || !listsRef.current.some((list) =>
+          list.id === listId && list.items.some((current) => current.id === item.id && current.name === item.name))) return
         updateItemLocal(listId, item.id, (current) => ({ ...current, imageUrl }))
         enqueue('guardar la foto del ítem', {
           kind: 'update',
@@ -462,6 +489,7 @@ export function useShoppingLists(userId: string) {
   }
 
   function setItemImage(listId: string, itemId: string, imageUrl: string | undefined) {
+    if (getOutboxUser() !== userId || isFinishQueued(listId) || !listsRef.current.some((list) => list.id === listId && list.items.some((item) => item.id === itemId))) return
     const previousImageUrl = findItem(listId, itemId)?.imageUrl
     updateItemLocal(listId, itemId, (item) => ({ ...item, imageUrl }))
     enqueue('guardar la foto del ítem', {
@@ -477,6 +505,7 @@ export function useShoppingLists(userId: string) {
   // la foto propia (si tenía una, se borra de Storage) o de la detección
   // automática por nombre.
   function setItemIcon(listId: string, itemId: string, iconKey: string | undefined) {
+    if (getOutboxUser() !== userId || isFinishQueued(listId) || !listsRef.current.some((list) => list.id === listId && list.items.some((item) => item.id === itemId))) return
     const previousImageUrl = findItem(listId, itemId)?.imageUrl
     updateItemLocal(listId, itemId, (item) => ({ ...item, iconKey, imageUrl: undefined }))
     enqueue('guardar el ícono del ítem', {
@@ -499,6 +528,9 @@ export function useShoppingLists(userId: string) {
     restoreList,
     updateListName,
     setListBudget,
+    setListCurrency,
+    archiveLocally,
+    repeatPurchase,
     importBackup,
     addItem,
     updateItem,

@@ -32,6 +32,7 @@ import { RenameSheet } from './RenameSheet'
 import { Icon } from './Icon'
 import { ItemThumb } from './ItemThumb'
 import { AddItemSheet, EditItemSheet } from './ItemSheet'
+import { CurrencySheet, FinishPurchaseSheet } from './FinishPurchaseSheet'
 import { BudgetSheet } from './BudgetSheet'
 import { itemTotal, QUANTITY_UNITS, sumItemTotals } from '../lib/pricing'
 import { budgetSummary } from '../lib/budget'
@@ -55,6 +56,8 @@ interface ListDetailProps {
   onClearCompleted: () => void
   onUncheckAll: () => void
   onRename: (name: string) => void
+  onFinish: (currency: string) => void
+  onSetCurrency: (currency: string) => void
   onSetBudget: (budget: number | undefined, currency: string) => void
   onDuplicate: () => void
   onToggleTemplate: () => void
@@ -124,13 +127,23 @@ export function ListDetail({
   onClearCompleted,
   onUncheckAll,
   onRename,
+  onFinish,
+  onSetCurrency,
   onSetBudget,
   onDuplicate,
   onToggleTemplate,
   onUseTemplate,
   onDeleteList,
 }: ListDetailProps) {
-  const { currency } = usePrefs()
+  const preferences = usePrefs()
+  const currency = list.currency ?? preferences.currency
+  const [currencyAction, setCurrencyAction] = useState<(() => void) | null>(null)
+  const [finishing, setFinishing] = useState(false)
+  const displayMoney = (amount: number) => list.currency ? formatPrice(amount, list.currency) : `${amount.toLocaleString('es-CL')} (moneda por confirmar)`
+  function withCurrency(action: () => void) {
+    if (list.currency) action()
+    else setCurrencyAction(() => action)
+  }
   const [query, setQuery] = useState('')
   const [adding, setAdding] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -211,7 +224,7 @@ export function ListDetail({
 
   const menuActions = [
     { label: 'Renombrar', icon: 'edit' as const, onSelect: () => setRenaming(true) },
-    { label: list.budget === undefined ? 'Definir presupuesto' : 'Editar presupuesto', icon: 'coins' as const, onSelect: () => setEditingBudget(true) },
+    { label: list.budget === undefined ? 'Definir presupuesto' : 'Editar presupuesto', icon: 'coins' as const, onSelect: () => withCurrency(() => setEditingBudget(true)) },
     { label: 'Compartir', icon: 'share' as const, onSelect: () => void handleShare() },
     ...(doneCount > 0
       ? [
@@ -245,6 +258,7 @@ export function ListDetail({
         </button>
       </header>
 
+      {!list.currency && <p role="status">Moneda por confirmar. <button type="button" className="chip" onClick={() => withCurrency(() => {})}>Confirmar moneda</button></p>}
       {list.isTemplate && (
         <div className={styles.templateBanner}>
           <Icon name="bookmark" size={18} filled />
@@ -276,15 +290,15 @@ export function ListDetail({
             <dl className={styles.totals}>
               <div>
                 <dt>En el carro</dt>
-                <dd>{formatPrice(doneTotal, currency)}</dd>
+                <dd>{displayMoney(doneTotal)}</dd>
               </div>
               <div>
                 <dt>Por comprar</dt>
-                <dd>{formatPrice(pendingTotal, currency)}</dd>
+                <dd>{displayMoney(pendingTotal)}</dd>
               </div>
               <div>
                 <dt>Total</dt>
-                <dd>{formatPrice(doneTotal + pendingTotal, currency)}</dd>
+                <dd>{displayMoney(doneTotal + pendingTotal)}</dd>
               </div>
             </dl>
           )}
@@ -295,11 +309,11 @@ export function ListDetail({
         <section className={`${styles.summary} ${budget.projectedRemaining !== undefined && budget.projectedRemaining < 0 ? styles.budgetExceeded : ''}`} aria-label="Presupuesto">
           <div className={styles.summaryTop}>
             <strong>{list.budget === undefined ? 'Presupuesto' : formatPrice(list.budget, list.budgetCurrency ?? currency)}</strong>
-            <button type="button" className="chip" onClick={() => setEditingBudget(true)}>{list.budget === undefined ? 'Definir' : 'Editar'}</button>
+            <button type="button" className="chip" onClick={() => withCurrency(() => setEditingBudget(true))}>{list.budget === undefined ? 'Definir' : 'Editar'}</button>
           </div>
           {list.budget !== undefined && !budget.matchesCurrency ? (
-            <p>El presupuesto está en {list.budgetCurrency}. Usa esa moneda en Ajustes o edita el presupuesto para compararlo.</p>
-          ) : budget.remaining !== undefined ? (
+            <p>El presupuesto está en {list.budgetCurrency}. Edita el presupuesto para compararlo con la moneda de la lista.</p>
+          ) : list.currency && budget.remaining !== undefined ? (
             <>
               <p role="status">{budget.remaining >= 0 ? 'Disponible después del carro' : 'Exceso en el carro'}: {formatPrice(Math.abs(budget.remaining), currency)}</p>
               {budget.projectedRemaining !== undefined && budget.projectedRemaining < 0 ? (
@@ -310,6 +324,9 @@ export function ListDetail({
           ) : <p>Define un límite para comparar el carro y el total estimado.</p>}
         </section>
       )}
+      {currencyAction && <CurrencySheet list={list} onClose={() => setCurrencyAction(null)} onSave={(value) => { onSetCurrency(value); currencyAction(); setCurrencyAction(null) }} />}
+      {finishing && <FinishPurchaseSheet list={list} onClose={() => setFinishing(false)} onFinish={onFinish} />}
+      {!list.isTemplate && doneCount > 0 && <button type="button" className="btn btn-primary" style={{ width: '100%', marginBottom: 16 }} onClick={() => setFinishing(true)}><Icon name="check" size={18} />Finalizar compra</button>}
       {editingBudget && <BudgetSheet list={list} onSave={onSetBudget} onClose={() => setEditingBudget(false)} />}
 
       {totalCount >= SEARCH_MIN_ITEMS && (
@@ -331,7 +348,7 @@ export function ListDetail({
           <div className="empty-art">📝</div>
           <p className="empty-title">Lista vacía</p>
           <p>Agrega lo que necesitas comprar.</p>
-          <button type="button" className="btn btn-accent" onClick={() => setAdding(true)}>
+          <button type="button" className="btn btn-accent" onClick={() => withCurrency(() => setAdding(true))}>
             <Icon name="plus" size={18} />
             Agregar ítems
           </button>
@@ -367,11 +384,11 @@ export function ListDetail({
                       <ItemRow
                         key={item.id}
                         item={item}
-                        currency={currency}
+                        currency={list.currency}
                         productCatalog={productCatalog}
                         draggable={!query.trim() && group.items.length > 1}
                         onToggle={onToggleItem}
-                        onEdit={setEditingItemId}
+                        onEdit={(id) => withCurrency(() => setEditingItemId(id))}
                         onDelete={onDeleteItem}
                         showSwipeHint={showSwipeHint && item.id === firstPendingItemId}
                       />
@@ -404,11 +421,11 @@ export function ListDetail({
                       <ItemRow
                         key={item.id}
                         item={item}
-                        currency={currency}
+                        currency={list.currency}
                         productCatalog={productCatalog}
                         draggable={false}
                         onToggle={onToggleItem}
-                        onEdit={setEditingItemId}
+                        onEdit={(id) => withCurrency(() => setEditingItemId(id))}
                         onDelete={onDeleteItem}
                       />
                     ))}
@@ -422,7 +439,7 @@ export function ListDetail({
 
       {totalCount > 0 && (
         <div className="fab-layer">
-          <button type="button" className="fab" onClick={() => setAdding(true)}>
+          <button type="button" className="fab" onClick={() => withCurrency(() => setAdding(true))}>
             <Icon name="plus" size={22} />
             Agregar
           </button>
@@ -431,6 +448,7 @@ export function ListDetail({
 
       {adding && (
         <AddItemSheet
+          currency={currency}
           items={list.items}
           categories={categories}
           itemMemory={itemMemory}
@@ -444,6 +462,7 @@ export function ListDetail({
       {editingItem && (
         <EditItemSheet
           key={editingItem.id}
+          currency={currency}
           item={editingItem}
           categories={categories}
           productCatalog={productCatalog}
@@ -472,7 +491,7 @@ export function ListDetail({
 
 interface ItemRowProps {
   item: Item
-  currency: string
+  currency: string | undefined
   productCatalog: Map<string, CatalogIcon>
   draggable: boolean
   onToggle: (itemId: string) => void
@@ -510,8 +529,8 @@ const ItemRow = memo(function ItemRow({
   const subtotal = itemTotal(item)
   const per = QUANTITY_UNITS.find((entry) => entry.value === item.quantityUnit)?.per ?? 'unidad'
   const meta = [item.quantity,
-    item.unitPrice !== undefined ? `${formatPrice(item.unitPrice, currency)}/${per}` : null,
-    subtotal != null ? `${item.unitPrice !== undefined ? '= ' : ''}${formatPrice(subtotal, currency)}` : null].filter(Boolean)
+    item.unitPrice !== undefined ? `${(currency ? formatPrice(item.unitPrice, currency) : String(item.unitPrice))}/${per}` : null,
+    subtotal != null ? `${item.unitPrice !== undefined ? '= ' : ''}${(currency ? formatPrice(subtotal, currency) : `${subtotal} (moneda por confirmar)`)}` : null].filter(Boolean)
 
   return (
     <li
@@ -538,7 +557,7 @@ const ItemRow = memo(function ItemRow({
           type="button"
           role="checkbox"
           aria-checked={item.done}
-          aria-label={`${item.name}${item.quantity ? `, ${item.quantity}` : ''}${subtotal !== undefined ? `, total ${formatPrice(subtotal, currency)}` : ''}`}
+          aria-label={`${item.name}${item.quantity ? `, ${item.quantity}` : ''}${subtotal !== undefined ? `, total ${(currency ? formatPrice(subtotal, currency) : `${subtotal} (moneda por confirmar)`)}` : ''}`}
           className={styles.itemMain}
           onClick={() => onToggle(item.id)}
         >

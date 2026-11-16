@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export type Tab = 'lists' | 'categories' | 'products' | 'settings'
+export type Tab = 'lists' | 'categories' | 'products' | 'settings' | 'history'
 
 export interface Route {
   tab: Tab
@@ -9,6 +9,7 @@ export interface Route {
 
 const TAB_PATHS: Record<Tab, string> = {
   lists: '#/',
+  history: '#/historial',
   categories: '#/categorias',
   products: '#/productos',
   settings: '#/ajustes',

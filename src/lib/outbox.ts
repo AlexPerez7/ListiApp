@@ -11,9 +11,10 @@ type Row = Record<string, unknown>
 type Match = Record<string, string | boolean>
 
 export type OutboxOp =
-  | { kind: 'upsert'; table: string; values: Row | Row[]; onConflict?: string }
+  | { kind: 'upsert'; table: string; values: Row | Row[]; onConflict?: string; ignoreDuplicates?: boolean }
   | { kind: 'update'; table: string; values: Row; match: Match }
   | { kind: 'delete'; table: string; match: Match }
+  | { kind: 'rpc'; fn: 'finish_purchase'; args: Row }
 
 interface QueuedOp {
   id: string
@@ -136,6 +137,10 @@ export function getFailedChanges(): FailedChange[] {
   return queue.filter((entry): entry is FailedChange => Boolean(entry.failure))
 }
 
+export function isFinishQueued(listId: string): boolean {
+  return queue.some((entry) => entry.op.kind === 'rpc' && entry.op.args.p_list_id === listId)
+}
+
 /** No envía cambios hasta que la persona pide reintentarlos. */
 export function retryFailedChanges(ids: string[]) {
   const selected = new Set(ids)
@@ -188,8 +193,11 @@ export function whenOutboxIdle(): Promise<void> {
 async function execute(op: OutboxOp): Promise<{ status: number; message: string } | null> {
   try {
     let result: { error: { message: string } | null; status: number; count?: number | null }
-    if (op.kind === 'upsert') {
-      result = await supabase.from(op.table).upsert(op.values, { onConflict: op.onConflict ?? 'id' })
+    if (op.kind === 'rpc') {
+      if (getFailedCount() > 0) return { status: 409, message: 'Revisa los cambios rechazados antes de finalizar la compra.' }
+      result = await supabase.rpc(op.fn, op.args)
+    } else if (op.kind === 'upsert') {
+      result = await supabase.from(op.table).upsert(op.values, { onConflict: op.onConflict ?? 'id', ignoreDuplicates: op.ignoreDuplicates ?? false })
     } else if (op.kind === 'update') {
       let query = supabase.from(op.table).update(op.values, { count: 'exact' })
       for (const [column, value] of Object.entries(op.match)) query = query.eq(column, value)
@@ -261,7 +269,9 @@ export async function flush(): Promise<void> {
       } else {
         queue.splice(queue.indexOf(head), 1)
         persist()
-        if (head.retryingFailure) for (const listener of recoveryListeners) listener()
+        if (head.retryingFailure || head.op.kind === 'rpc' || head.op.table === 'purchase_history') {
+          for (const listener of recoveryListeners) listener()
+        }
       }
       notify()
     }

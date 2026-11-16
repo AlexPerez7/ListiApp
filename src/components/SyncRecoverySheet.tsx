@@ -9,7 +9,7 @@ import {
 import styles from './SyncRecoverySheet.module.css'
 
 function names(change: FailedChange): string {
-  if (change.op.kind === 'delete') return ''
+  if (change.op.kind === 'delete' || change.op.kind === 'rpc') return ''
   const rows = Array.isArray(change.op.values) ? change.op.values : [change.op.values]
   return rows.map((row) => row.name).filter((value): value is string => typeof value === 'string').slice(0, 3).join(', ')
 }

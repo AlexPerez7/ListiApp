@@ -16,6 +16,7 @@ import { usePurchaseDraft } from '../hooks/usePurchaseDraft'
 
 interface AddItemSheetProps {
   items: Item[]
+  currency?: string
   categories: Category[]
   itemMemory: ItemMemory
   productCatalog: Map<string, CatalogIcon>
@@ -32,13 +33,15 @@ export function AddItemSheet({
   categories,
   itemMemory,
   productCatalog,
+  currency: selectedCurrency,
   onAdd,
   onToggleItem,
   onClose,
 }: AddItemSheetProps) {
   const [name, setName] = useState('')
-  const [draft, setDraft] = usePurchaseDraft()
-  const { currency } = usePrefs()
+  const preferences = usePrefs()
+  const currency = selectedCurrency ?? preferences.currency
+  const [draft, setDraft] = usePurchaseDraft(undefined, currency)
   const [manualCategoryId, setManualCategoryId] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ text: string; warn?: boolean } | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -115,7 +118,7 @@ export function AddItemSheet({
             autoFocus
           />
         </div>
-        <PurchaseFields draft={draft} onChange={setDraft} />
+        <PurchaseFields currency={currency} draft={draft} onChange={setDraft} />
 
         <div role="status">
           {notice && (
@@ -168,6 +171,7 @@ export function AddItemSheet({
 
 interface EditItemSheetProps {
   item: Item
+  currency?: string
   categories: Category[]
   productCatalog: Map<string, CatalogIcon>
   onSave: (input: NewItemInput) => void
@@ -182,6 +186,7 @@ export function EditItemSheet({
   item,
   categories,
   productCatalog,
+  currency: selectedCurrency,
   onSave,
   onDelete,
   onUploadImage,
@@ -189,9 +194,10 @@ export function EditItemSheet({
   onChooseIcon,
   onClose,
 }: EditItemSheetProps) {
-  const { currency } = usePrefs()
+  const preferences = usePrefs()
+  const currency = selectedCurrency ?? preferences.currency
   const [name, setName] = useState(item.name)
-  const [draft, setDraft] = usePurchaseDraft(item)
+  const [draft, setDraft] = usePurchaseDraft(item, currency)
   const [formError, setFormError] = useState<string | null>(null)
   const [categoryId, setCategoryId] = useState(item.categoryId ?? '')
   const [pickingIcon, setPickingIcon] = useState(false)
@@ -299,7 +305,7 @@ export function EditItemSheet({
           />
         </label>
 
-        <PurchaseFields draft={draft} onChange={(next) => { setDraft(next); setFormError(null) }} />
+        <PurchaseFields currency={currency} draft={draft} onChange={(next) => { setDraft(next); setFormError(null) }} />
         {formError && <p className={`${styles.notice} ${styles.noticeWarn}`} role="alert">{formError}</p>}
 
         {categories.length > 0 && (

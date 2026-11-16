@@ -22,6 +22,23 @@ export interface ShoppingList {
   isTemplate: boolean
   budget?: number
   budgetCurrency?: string
+  currency?: string
+}
+
+export type PurchaseItem = Pick<Item, 'id' | 'name' | 'quantity' | 'quantityValue' | 'quantityUnit' | 'unitPrice' | 'price' | 'iconKey' | 'done' | 'position'> & { categoryName?: string }
+
+export interface Purchase {
+  id: string
+  name: string
+  completedAt: number
+  currency: string
+  total: number
+  purchasedCount: number
+  unpricedCount: number
+  budget?: number
+  budgetCurrency?: string
+  items: PurchaseItem[]
+  pending?: boolean
 }
 
 export type QuantityUnit = 'unit' | 'kg' | 'g' | 'l' | 'ml'
