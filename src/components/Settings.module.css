@@ -195,3 +195,7 @@ button.row:active:not(:disabled) {
     transform: rotate(360deg);
   }
 }
+
+.updateButton:disabled {
+  opacity: 0.6;
+}

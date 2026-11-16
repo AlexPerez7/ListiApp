@@ -127,29 +127,14 @@ export function Settings({ email, listCount, onExport, onImport, onSignOut }: Se
       <section className={styles.group}>
         <h2 className="section-label">Aplicación</h2>
         <div className={styles.card}>
-          {updateStatus === 'available' ? (
-            <div className={styles.row}>
-              <Icon name="download" size={20} />
-              <span className={styles.rowLabel}>
-                Nueva versión disponible
-                <small>Se aplicará al actualizar; tus datos no cambian</small>
-              </span>
-              <button type="button" className={styles.updateButton} onClick={installUpdate}>
-                Actualizar
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className={styles.row}
-              onClick={() => void checkForUpdate()}
-              disabled={updateStatus === 'checking' || !online}
-            >
-              <Icon name="sync" size={20} className={updateStatus === 'checking' ? styles.spinning : undefined} />
-              <span className={styles.rowLabel}>
-                Buscar actualizaciones
-                <small aria-live="polite">
-                  {updateStatus === 'checking'
+          <div className={styles.row}>
+            <Icon name={updateStatus === 'available' ? 'download' : 'sync'} size={20} className={updateStatus === 'checking' ? styles.spinning : undefined} />
+            <span className={styles.rowLabel}>
+              {updateStatus === 'available' ? 'Nueva versión disponible' : 'Versión de la app'}
+              <small aria-live="polite">
+                {updateStatus === 'available'
+                  ? 'Se aplicará al actualizar; tus datos no cambian'
+                  : updateStatus === 'checking'
                     ? 'Buscando…'
                     : updateStatus === 'upToDate'
                       ? `Tienes la última versión (v${__APP_VERSION__})`
@@ -158,10 +143,17 @@ export function Settings({ email, listCount, onExport, onImport, onSignOut }: Se
                         : !online
                           ? 'Necesitas conexión para buscar'
                           : `Versión instalada: v${__APP_VERSION__}`}
-                </small>
-              </span>
+              </small>
+            </span>
+            <button
+              type="button"
+              className={styles.updateButton}
+              onClick={updateStatus === 'available' ? installUpdate : () => void checkForUpdate()}
+              disabled={updateStatus === 'checking' || (updateStatus !== 'available' && !online)}
+            >
+              {updateStatus === 'available' ? 'Actualizar' : updateStatus === 'checking' ? 'Buscando…' : 'Buscar actualización'}
             </button>
-          )}
+          </div>
         </div>
       </section>
 
