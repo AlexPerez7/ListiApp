@@ -11,6 +11,7 @@ import { Icon } from './Icon'
 import { ProductIconGrid } from './Pickers'
 import { SkeletonList } from './Skeleton'
 import styles from './Products.module.css'
+import { matchesProductSearch } from '../lib/search'
 
 interface ProductsProps {
   catalog: ProductCatalogEntry[]
@@ -32,7 +33,7 @@ export function Products({ catalog, loading, onCreate, onUpdate, onDelete, onUpl
   const filteredCatalog = useMemo(() => {
     const needle = normalizeProductName(query)
     if (!needle) return catalog
-    return catalog.filter((entry) => normalizeProductName(entry.name).includes(needle))
+    return catalog.filter((entry) => matchesProductSearch(entry.name, needle))
   }, [catalog, query])
 
   const editing = sheet && sheet !== 'new' ? catalog.find((entry) => entry.id === sheet) : undefined

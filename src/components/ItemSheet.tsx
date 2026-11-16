@@ -57,7 +57,7 @@ export function AddItemSheet({
     [items],
   )
   const suggestions = useMemo(
-    () => matchSuggestions(itemMemory.names, productCatalog.keys(), name, pendingNames),
+    () => matchSuggestions(itemMemory.names, [...productCatalog].map(([key, value]) => value.name ?? key), name, pendingNames),
     [itemMemory.names, productCatalog, name, pendingNames],
   )
 

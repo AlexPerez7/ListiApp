@@ -55,7 +55,8 @@ Otros comandos:
 
 ## Arquitectura
 
-- `src/App.tsx`: control de sesión y composición de pantallas.
+- `src/App.tsx`: control de sesión y carga bajo demanda de acceso, recuperación y espacio de trabajo.
+- `src/Workspace.tsx`: datos y acciones de la cuenta, navegación y carga de cada pantalla cuando se abre. Los datos sincronizados permanecen montados al cambiar de pestaña.
 - `src/components/`: pantallas (`Home`, `ListDetail`, `Categories`, `Products`, `Settings`, `Auth`) y piezas compartidas (`BottomSheet`, `Overlays`, `Pickers`).
 - `src/hooks/useSyncedCollection.ts`: base de los datos sincronizados. Abre con la copia local, lee del servidor, escucha Realtime y vuelve a leer al reconectar.
 - `src/lib/outbox.ts`: cola persistente de cambios. Cada cambio se aplica primero en pantalla y luego se envía en orden; si no hay red espera y reintenta, y si el servidor lo rechaza se avisa y se recargan los datos.
@@ -88,6 +89,14 @@ node scripts/generate-icons.mjs
 ```
 
 ## Deploy
+
+### Versión 1.4.0
+
+- Acceso, recuperación, espacio de trabajo y pestañas se cargan bajo demanda mediante React Suspense. Las dependencias de arrastrar y ordenar ya no se ejecutan como parte del archivo principal de entrada.
+- Todas las pantallas JS/CSS siguen incluidas en la caché de la PWA. El build comprueba que no falte ninguna antes de publicar. La descarga total de instalación puede ser similar: la mejora principal es reducir el código que se carga y ejecuta al abrir la app.
+- El archivo principal pasó de aproximadamente 587 KB a 416 KB sin comprimir. No se requiere migración de Supabase.
+- Las búsquedas de listas ignoran acentos, mayúsculas, espacios repetidos y orden de palabras. Productos, ítems y sugerencias también reconocen sinónimos conocidos y palabras interiores (por ejemplo, `mani` encuentra `Pasta de maní`).
+- Las sugerencias conservan los acentos originales y evitan repetir sinónimos o recomendar un producto equivalente que ya esté pendiente.
 
 ### Versión 1.3.0
 

@@ -1,5 +1,6 @@
 import type { ShoppingList } from '../types'
-import { normalizeProductName } from './productCatalog'
+import { canonicalProductName, normalizeProductName } from './productCatalog'
+import { matchesProductSearch } from './search'
 
 export interface ItemMemory {
   /** Nombres ordenados por frecuencia de uso (de más a menos comprado). */
@@ -61,19 +62,21 @@ export function matchSuggestions(
   const needle = normalizeProductName(query)
   const matches: string[] = []
   const seen = new Set<string>()
+  const excluded = new Set([...exclude].map(canonicalProductName))
 
-  const consider = (name: string, prefixOnly: boolean) => {
+  const consider = (name: string) => {
     if (matches.length >= limit) return
     const key = normalizeProductName(name)
-    if (seen.has(key) || exclude.has(key) || key === needle) return
-    if (needle && !(prefixOnly ? key.startsWith(needle) : key.includes(needle))) return
-    seen.add(key)
+    const canonical = canonicalProductName(name)
+    if (seen.has(canonical) || excluded.has(canonical) || key === needle) return
+    if (needle && !matchesProductSearch(name, needle)) return
+    seen.add(canonical)
     matches.push(name)
   }
 
-  for (const name of names) consider(name, false)
+  for (const name of names) consider(name)
   if (needle) {
-    for (const name of catalogNames) consider(capitalize(name), true)
+    for (const name of catalogNames) consider(capitalize(name))
   }
   return matches
 }

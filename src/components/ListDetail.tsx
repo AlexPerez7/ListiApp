@@ -28,13 +28,14 @@ import { confirmDialog } from '../lib/confirm'
 import { useSwipeToDelete } from '../hooks/useSwipeToDelete'
 import { hasSeenSwipeHint, markSwipeHintSeen } from '../lib/swipeHint'
 import { ActionSheet } from './BottomSheet'
-import { RenameSheet } from './Home'
+import { RenameSheet } from './RenameSheet'
 import { Icon } from './Icon'
 import { ItemThumb } from './ItemThumb'
 import { AddItemSheet, EditItemSheet } from './ItemSheet'
 import { BudgetSheet } from './BudgetSheet'
 import { itemTotal, QUANTITY_UNITS, sumItemTotals } from '../lib/pricing'
 import { budgetSummary } from '../lib/budget'
+import { matchesProductSearch } from '../lib/search'
 import styles from './ListDetail.module.css'
 
 interface ListDetailProps {
@@ -142,9 +143,8 @@ export function ListDetail({
   const categoriesById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
 
   const filteredItems = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    if (!needle) return list.items
-    return list.items.filter((item) => item.name.toLowerCase().includes(needle))
+    if (!query.trim()) return list.items
+    return list.items.filter((item) => matchesProductSearch(item.name, query))
   }, [list.items, query])
 
   const pending = useMemo(() => filteredItems.filter((item) => !item.done), [filteredItems])

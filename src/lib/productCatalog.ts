@@ -121,6 +121,7 @@ export function normalizeProductName(name: string): string {
     .replace(/[̀-ͯ]/g, '')
     .trim()
     .toLowerCase()
+    .replace(/\s+/g, ' ')
 }
 
 // Sinónimos conocidos; las coincidencias exactas del catálogo personal tienen prioridad.
@@ -136,6 +137,21 @@ export function canonicalProductName(name: string): string {
   return PRODUCT_ALIASES[normalized] ?? normalized
 }
 
+/** Variantes para buscar; no cambia el nombre que eligió la persona. */
+export function productSearchVariants(name: string): string[] {
+  const normalized = normalizeProductName(name)
+  const variants = new Set([normalized, canonicalProductName(name)])
+  for (const [alias, canonical] of Object.entries(PRODUCT_ALIASES)) {
+    if (normalized.startsWith(`${alias} `)) variants.add(canonical + normalized.slice(alias.length))
+  }
+  for (const candidate of [...variants]) {
+    for (const [alias, canonical] of Object.entries(PRODUCT_ALIASES)) {
+      if (candidate === canonical || candidate.startsWith(`${canonical} `)) variants.add(alias + candidate.slice(canonical.length))
+    }
+  }
+  return [...variants]
+}
+
 export function missingDefaultProducts(entries: Pick<ProductCatalogEntry, 'name'>[]) {
   const existing = new Set(entries.map((entry) => canonicalProductName(entry.name)))
   return DEFAULT_PRODUCT_CATALOG.filter((entry) => !existing.has(canonicalProductName(entry.name)))
@@ -144,12 +160,13 @@ export function missingDefaultProducts(entries: Pick<ProductCatalogEntry, 'name'
 export interface CatalogIcon {
   iconKey: string
   imageUrl?: string
+  name?: string
 }
 
 export function buildCatalogMap(entries: ProductCatalogEntry[]): Map<string, CatalogIcon> {
   const map = new Map<string, CatalogIcon>()
   for (const entry of entries) {
-    map.set(normalizeProductName(entry.name), { iconKey: entry.iconKey, imageUrl: entry.imageUrl })
+    map.set(normalizeProductName(entry.name), { iconKey: entry.iconKey, imageUrl: entry.imageUrl, name: entry.name })
   }
   return map
 }

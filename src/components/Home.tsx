@@ -5,9 +5,11 @@ import { pluralize } from '../lib/format'
 import { ActionSheet, BottomSheet } from './BottomSheet'
 import { Icon } from './Icon'
 import { ItemThumb } from './ItemThumb'
+import { RenameSheet } from './RenameSheet'
 import { Logo } from './Logo'
 import { SkeletonList } from './Skeleton'
 import styles from './Home.module.css'
+import { matchesTextSearch } from '../lib/search'
 
 interface HomeProps {
   lists: ShoppingList[]
@@ -44,9 +46,8 @@ export function Home({
   const [renamingListId, setRenamingListId] = useState<string | null>(null)
 
   const filteredLists = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    if (!needle) return lists
-    return lists.filter((list) => list.name.toLowerCase().includes(needle))
+    if (!query.trim()) return lists
+    return lists.filter((list) => matchesTextSearch(list.name, query))
   }, [lists, query])
 
   const templates = useMemo(() => filteredLists.filter((list) => list.isTemplate), [filteredLists])
@@ -324,46 +325,6 @@ function NewListSheet({ existingNames, templates, onCreate, onUseTemplate, onClo
           </div>
         </section>
       )}
-    </BottomSheet>
-  )
-}
-
-interface RenameSheetProps {
-  title: string
-  initialName: string
-  onSave: (name: string) => void
-  onClose: () => void
-}
-
-export function RenameSheet({ title, initialName, onSave, onClose }: RenameSheetProps) {
-  const [name, setName] = useState(initialName)
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const trimmed = name.trim()
-    if (!trimmed) return
-    if (trimmed !== initialName) onSave(trimmed)
-    onClose()
-  }
-
-  return (
-    <BottomSheet title={title} onClose={onClose}>
-      <form className={styles.sheetForm} onSubmit={handleSubmit}>
-        <input
-          className="input"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onFocus={(e) => e.target.select()}
-          maxLength={80}
-          enterKeyHint="done"
-          aria-label="Nombre"
-          autoFocus
-        />
-        <button className="btn btn-primary btn-block" type="submit" disabled={!name.trim()}>
-          Guardar
-        </button>
-      </form>
     </BottomSheet>
   )
 }
